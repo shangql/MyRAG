@@ -1,0 +1,90 @@
+# MyRAG Docker Compose 配置
+# 使用 docker-compose up -d 启动所有服务
+
+version: "3.8"
+
+services:
+  # RAG API 服务
+  rag-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: myrag-api
+    ports:
+      - "8000:8000"
+    environment:
+      # 数据库配置
+      - DATABASE_URL=${DATABASE_URL:-mysql+pymysql://user:password@db:3306/rag_db}
+      
+      # 向量存储配置
+      - VECTOR_STORE_TYPE=${VECTOR_STORE_TYPE:-chroma}
+      - PERSIST_DIRECTORY=/app/data/vector_store
+      
+      # 嵌入模型配置
+      - EMBEDDING_MODEL=${EMBEDDING_MODEL:-sentence-transformers/all-MiniLM-L6-v2}
+      - EMBEDDING_DEVICE=${EMBEDDING_DEVICE:-cpu}
+      
+      # LLM 配置
+      - LLM_PROVIDER=${LLM_PROVIDER:-openai}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - OPENAI_MODEL=${OPENAI_MODEL:-gpt-3.5-turbo}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - OLLAMA_BASE_URL=${OLLAMA_BASE_URL:-http://host.docker.internal:11434}
+      
+      # 日志配置
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+    restart: unless-stopped
+    depends_on:
+      - db
+      - redis
+
+  # Streamlit Web 界面
+  rag-ui:
+    image: streamlit:latest
+    container_name: myrag-ui
+    ports:
+      - "8501:8501"
+    environment:
+      - API_BASE_URL=http://rag-api:8000
+    volumes:
+      - ./src/ui:/app/ui
+    command: streamlit run ui/app.py
+    restart: unless-stopped
+    depends_on:
+      - rag-api
+
+  # MySQL 数据库
+  db:
+    image: mysql:8.0
+    container_name: myrag-db
+    ports:
+      - "3306:3306"
+    environment:
+      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD:-rootpassword}
+      - MYSQL_DATABASE=${MYSQL_DATABASE:-rag_db}
+      - MYSQL_USER=${MYSQL_USER:-user}
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD:-password}
+    volumes:
+      - mysql-data:/var/lib/mysql
+    restart: unless-stopped
+
+  # Redis 缓存
+  redis:
+    image: redis:7-alpine
+    container_name: myrag-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    restart: unless-stopped
+
+volumes:
+  mysql-data:
+  redis-data:
+
+networks:
+  default:
+    name: myrag-network
