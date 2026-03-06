@@ -13,13 +13,13 @@
 | **数据源** | 数据库（结构化数据） |
 | **数据规模** | 小型（<10万条记录） |
 | **交互方式** | Web 聊天界面 |
-| **LLM 支持** | 多模型切换（OpenAI / 本地开源模型） |
+| **LLM 支持** | ModelScope（国内可用，每日 2000 次免费调用） |
 
 ### 1.3 核心特性
 
 - 支持多数据源接入（MySQL、PostgreSQL、MongoDB）
 - 混合检索：向量检索 + 关键词检索
-- 多 LLM 切换：OpenAI GPT、Claude、本地 Llama2/Qwen
+- LLM：ModelScope（DeepSeek-R1、Qwen3 等开源大模型）
 - Web 界面：流式输出、对话历史、引用来源展示
 - 可扩展架构：插件化向量库、灵活的分词器
 
@@ -71,7 +71,7 @@
 | **前端** | Streamlit | 快速构建数据应用的 UI 框架 |
 | **向量存储** | ChromaDB / FAISS | 轻量级向量数据库，支持本地部署 |
 | **嵌入模型** | sentence-transformers | 开源中文/英文嵌入模型 |
-| **LLM 客户端** | LangChain | 统一的多模型接入框架 |
+| **LLM 客户端** | OpenAI 兼容 API | 通过 OpenAI 兼容接口接入 ModelScope |
 | **数据库驱动** | SQLAlchemy + pymysql | 关系型数据库 ORM |
 | **配置管理** | Pydantic Settings | 类型安全的配置管理 |
 | **日志** | Loguru | 美化的日志输出 |
@@ -93,22 +93,17 @@ rag_system/
 │   ├── vector_store.py         # 向量存储管理
 │   └── embedder.py             # 嵌入模型管理
 ├── retrieval/                  # 检索模块
-│   ├── retriever.py            # 检索器基类
-│   ├── hybrid_retriever.py     # 混合检索实现
+│   ├── hybrid_retriever.py     # 混合检索实现 (向量 + BM25)
 │   └── query_processor.py      # 查询处理器
 ├── llm/                        # LLM 模块
-│   ├── base.py                 # LLM 基类
-│   ├── openai_llm.py           # OpenAI 实现
-│   ├── anthropic_llm.py        # Claude 实现
-│   └── local_llm.py            # 本地模型实现
+│   ├── orchestrator.py         # LLM 调度器
+│   └── modelscope_llm.py       # ModelScope 实现 (OpenAI 兼容)
 ├── application/                # 应用层
-│   ├── chat_manager.py         # 对话管理器
-│   ├── rag_pipeline.py         # RAG 流程编排
-│   └── context_builder.py      # 上下文构建器
+│   └── rag_pipeline.py         # RAG 流程编排
 ├── api/                        # API 层
+│   ├── main.py                 # FastAPI 应用入口
 │   ├── routes.py               # API 路由
-│   ├── schemas.py              # Pydantic 模型
-│   └── websocket.py            # WebSocket 处理
+│   └── schemas.py              # Pydantic 模型
 └── ui/                         # 前端界面
     └── app.py                  # Streamlit 应用
 ```
@@ -148,1051 +143,306 @@ rag_system/
 
 ## 四、开发阶段规划
 
-### 阶段一：基础架构搭建（第 1-2 周）
+### 阶段一：基础架构搭建 ✅ 完成
 
-| 序号 | 任务 | 交付物 |
-|------|------|--------|
-| 1.1 | 项目初始化、目录结构搭建 | `pyproject.toml`、基础代码框架 |
-| 1.2 | 配置管理模块 | `config.yaml`、环境变量加载 |
-| 1.3 | 日志系统 | 统一日志配置、请求追踪 |
-| 1.4 | 数据库连接器 | 支持 MySQL/PostgreSQL 的基础连接 |
+| 序号 | 任务 | 状态 |
+|------|------|------|
+| 1.1 | 项目初始化、目录结构搭建 | ✅ 完成 |
+| 1.2 | 配置管理模块（支持 .env） | ✅ 完成 |
+| 1.3 | 日志系统（Loguru） | ✅ 完成 |
+| 1.4 | 数据库连接器（MySQL） | ✅ 完成 |
 
-**代码示例 - 配置管理：**
+### 阶段二：数据层开发 ✅ 完成
 
-```python
-# core/config.py
-"""配置管理模块 - 使用 Pydantic Settings 进行类型安全的配置管理"""
-from pydantic_settings import BaseSettings
-from typing import Optional
+| 序号 | 任务 | 状态 |
+|------|------|------|
+| 2.1 | 嵌入模型封装（sentence-transformers） | ✅ 完成 |
+| 2.2 | 向量存储实现（ChromaDB / FAISS） | ✅ 完成 |
+| 2.3 | 数据导入脚本 | ⏳ 待开发 |
+| 2.4 | 数据增量更新 | ⏳ 待开发 |
 
+### 阶段三：检索模块开发 ✅ 完成
 
-class Settings(BaseSettings):
-    """应用配置类
-    
-    从环境变量加载配置，支持默认值
-    """
-    # 数据库配置
-    database_url: str = "mysql+pymysql://user:pass@localhost:3306/rag_db"
-    
-    # 向量数据库配置
-    vector_store_type: str = "chroma"  # chroma / faiss
-    persist_directory: str = "./data/vector_store"
-    
-    # 嵌入模型配置
-    embedding_model: str = "sentence-transformers/all-MiniLM-L6-v2"
-    embedding_device: str = "cpu"  # cpu / cuda
-    
-    # LLM 配置
-    llm_provider: str = "openai"  # openai / anthropic / ollama
-    openai_api_key: Optional[str] = None
-    openai_model: str = "gpt-3.5-turbo"
-    anthropic_api_key: Optional[str] = None
-    ollama_base_url: str = "http://localhost:11434"
-    
-    # 检索配置
-    top_k: int = 5
-    similarity_threshold: float = 0.7
-    
-    # API 配置
-    api_host: str = "0.0.0.0"
-    api_port: int = 8000
-    
-    class Config:
-        env_file = ".env"
-        env_file_encoding = "utf-8"
+| 序号 | 任务 | 状态 |
+|------|------|------|
+| 3.1 | 基础检索器（向量相似度） | ✅ 完成 |
+| 3.2 | 混合检索（向量 + BM25） | ✅ 完成 |
+| 3.3 | 查询预处理 | ⏳ 待开发 |
+| 3.4 | 结果重排序（RRF） | ✅ 完成 |
 
+### 阶段四：LLM 模块开发 ✅ 完成
 
-# 全局配置实例
-settings = Settings()
-```
+| 序号 | 任务 | 状态 |
+|------|------|------|
+| 4.1 | LLM 调度器（ModelScope） | ✅ 完成 |
+| 4.2 | ModelScope 集成（DeepSeek-R1、Qwen3） | ✅ 完成 |
+| 4.3 | OpenAI 兼容接口 | ✅ 完成 |
+| 4.4 | 流式输出（SSE） | ✅ 完成 |
 
-### 阶段二：数据层开发（第 3-4 周）
+### 阶段五：RAG 流程编排 ✅ 完成
 
-| 序号 | 任务 | 交付物 |
-|------|------|--------|
-| 2.1 | 嵌入模型封装 | `Embedder` 类，支持批量向量化 |
-| 2.2 | 向量存储实现 | ChromaDB / FAISS 封装 |
-| 2.3 | 数据导入脚本 | 从数据库同步到向量库 |
-| 2.4 | 数据增量更新 | 增量索引、删除同步 |
+| 序号 | 任务 | 状态 |
+|------|------|------|
+| 5.1 | RAG Pipeline | ✅ 完成 |
+| 5.2 | Prompt 模板（Jinja2） | ✅ 完成 |
+| 5.3 | 引用来源追溯 | ✅ 完成 |
+| 5.4 | 缓存优化 | ⏳ 待开发（Redis） |
 
-**代码示例 - 嵌入模型：**
+### 阶段六：API 与 Web 界面开发 ✅ 完成
 
-```python
-# data/embedder.py
-"""嵌入模型管理模块 - 负责将文本转换为向量表示"""
-from sentence_transformers import SentenceTransformer
-import numpy as np
-from typing import List, Union
-import torch
+| 序号 | 任务 | 状态 |
+|------|------|------|
+| 6.1 | FastAPI 基础 | ✅ 完成 |
+| 6.2 | REST API | ✅ 完成 |
+| 6.3 | 流式响应 | ✅ 完成 |
+| 6.4 | Streamlit UI | ✅ 完成 |
+| 6.5 | 前端优化 | ✅ 完成 |
 
+### 阶段七：测试与部署 ⏳ 待开发
 
-class Embedder:
-    """嵌入模型封装类
-    
-    使用 sentence-transformers 库加载预训练模型，
-    将文本转换为高维向量用于相似度计算
-    """
-    
-    def __init__(
-        self, 
-        model_name: str = "sentence-transformers/all-MiniLM-L6-v2",
-        device: str = "cpu",
-        batch_size: int = 32
-    ):
-        """初始化嵌入模型
-        
-        Args:
-            model_name: HuggingFace 模型名称
-            device: 运行环境 (cpu/cuda)
-            batch_size: 批处理大小
-        """
-        self.model_name = model_name
-        self.batch_size = batch_size
-        
-        # 根据设备选择加载模型
-        self.device = device if torch.cuda.is_available() else "cpu"
-        self.model = SentenceTransformer(model_name, device=self.device)
-        
-        # 获取向量维度
-        self.embedding_dim = self.model.get_sentence_embedding_dimension()
-    
-    def embed_texts(self, texts: List[str]) -> np.ndarray:
-        """将文本列表转换为向量列表
-        
-        Args:
-            texts: 文本列表
-            
-        Returns:
-            numpy 数组，shape = (len(texts), embedding_dim)
-        """
-        embeddings = self.model.encode(
-            texts,
-            batch_size=self.batch_size,
-            show_progress_bar=True,
-            convert_to_numpy=True
-        )
-        return embeddings
-    
-    def embed_query(self, query: str) -> np.ndarray:
-        """将单个查询转换为向量（别名方法）
-        
-        Args:
-            query: 查询文本
-            
-        Returns:
-            向量数组
-        """
-        return self.embed_texts([query])[0]
-```
+| 序号 | 任务 | 状态 |
+|------|------|------|
+| 7.1 | 单元测试 | ⏳ 待开发 |
+| 7.2 | 集成测试 | ⏳ 待开发 |
+| 7.3 | 性能测试 | ⏳ 待开发 |
+| 7.4 | Docker 镜像 | ⏳ 待开发 |
+| 7.5 | 部署文档 | ⏳ 待开发 |
 
-### 阶段三：检索模块开发（第 5-6 周）
+---
 
-| 序号 | 任务 | 交付物 |
-|------|------|--------|
-| 3.1 | 基础检索器 | 向量相似度检索 |
-| 3.2 | 混合检索 | 向量 + 关键词 BM25 融合 |
-| 3.3 | 查询预处理 | 分词、同义词扩展 |
-| 3.4 | 结果重排序 | RRF 排序算法 |
+## 五、待开发功能清单
 
-**代码示例 - 混合检索器：**
+### 5.1 数据导入模块
 
 ```python
-# retrieval/hybrid_retriever.py
-"""混合检索模块 - 结合向量检索与关键词检索"""
-from typing import List, Dict, Any, Optional
-import numpy as np
-from dataclasses import dataclass
+# scripts/import_data.py
+"""数据导入脚本 - 从数据库同步到向量库"""
+import sys
+sys.path.insert(0, 'src')
+
+from data import get_db, get_embedder, get_vector_store
+from core.config import settings
+from core.logger import get_logger
+
+logger = get_logger(__name__)
 
 
-@dataclass
-class SearchResult:
-    """检索结果数据类
-    
-    用于封装单条检索结果，包含文本内容、相似度分数、
-    元数据和原始数据源信息
-    """
-    content: str           # 检索到的文本内容
-    score: float           # 相似度分数 (0-1)
-    metadata: Dict         # 元数据 (来源表、ID 等)
-    rank: int              # 排名
+def import_documents(table_name: str, batch_size: int = 100):
+    """从数据库表导入文档到向量库
 
-
-class HybridRetriever:
-    """混合检索器
-    
-    融合向量检索与关键词检索，通过 RRF 算法对结果进行重排序
-    """
-    
-    def __init__(
-        self,
-        vector_store,
-        keyword_index: Optional[Any] = None,
-        top_k: int = 5,
-        vector_weight: float = 0.6,
-        keyword_weight: float = 0.4
-    ):
-        """初始化混合检索器
-        
-        Args:
-            vector_store: 向量存储实例
-            keyword_index: 关键词索引 (BM25)
-            top_k: 返回结果数量
-            vector_weight: 向量检索权重
-            keyword_weight: 关键词检索权重
-        """
-        self.vector_store = vector_store
-        self.keyword_index = keyword_index
-        self.top_k = top_k
-        self.vector_weight = vector_weight
-        self.keyword_weight = keyword_weight
-    
-    def search(
-        self, 
-        query: str, 
-        query_vector: np.ndarray,
-        filter_condition: Optional[Dict] = None
-    ) -> List[SearchResult]:
-        """执行混合检索
-        
-        1. 并行执行向量检索和关键词检索
-        2. 使用 RRF 算法融合结果
-        3. 返回融合后的 Top-K 结果
-        
-        Args:
-            query: 查询文本
-            query_vector: 查询的向量表示
-            filter_condition: 过滤条件 (如时间范围、分类)
-            
-        Returns:
-            按相关性排序的检索结果列表
-        """
-        # 向量检索
-        vector_results = self._vector_search(query_vector, filter_condition)
-        
-        # 关键词检索
-        keyword_results = self._keyword_search(query, filter_condition)
-        
-        # RRF 融合
-        fused_results = self._reciprocal_rank_fusion(
-            vector_results, 
-            keyword_results
-        )
-        
-        return fused_results[:self.top_k]
-    
-    def _vector_search(
-        self, 
-        query_vector: np.ndarray,
-        filter_condition: Optional[Dict]
-    ) -> List[SearchResult]:
-        """向量检索"""
-        # 调用向量存储的相似度搜索
-        results = self.vector_store.similarity_search(
-            query_vector=query_vector,
-            k=self.top_k * 2,  # 多取一些用于融合
-            filter=filter_condition
-        )
-        return results
-    
-    def _keyword_search(
-        self, 
-        query: str,
-        filter_condition: Optional[Dict]
-    ) -> List[SearchResult]:
-        """关键词检索 (BM25)"""
-        if self.keyword_index is None:
-            return []
-        
-        results = self.keyword_index.search(
-            query=query,
-            k=self.top_k * 2,
-            filter=filter_condition
-        )
-        return results
-    
-    def _reciprocal_rank_fusion(
-        self,
-        results_a: List[SearchResult],
-        results_b: List[SearchResult],
-        k: int = 60
-    ) -> List[SearchResult]:
-        """倒数排名融合算法 (RRF)
-        
-        RRF 公式: score = Σ(1 / (k + rank))
-        其中 k 为平滑参数，rank 为排名位置
-        
-        Args:
-            results_a: 第一组检索结果
-            results_b: 第二组检索结果
-            k: 平滑参数 (默认 60)
-            
-        Returns:
-            融合后的排序结果
-        """
-        # 构建排名字典
-        doc_scores = {}
-        
-        # 处理向量检索结果
-        for rank, result in enumerate(results_a):
-            doc_id = result.metadata.get("id", str(rank))
-            rrf_score = 1.0 / (k + rank + 1)
-            doc_scores[doc_id] = doc_scores.get(doc_id, 0) + rrf_score * self.vector_weight
-            result._rrf_score = rrf_score * self.vector_weight
-        
-        # 处理关键词检索结果
-        for rank, result in enumerate(results_b):
-            doc_id = result.metadata.get("id", str(rank))
-            rrf_score = 1.0 / (k + rank + 1)
-            doc_scores[doc_id] = doc_scores.get(doc_id, 0) + rrf_score * self.keyword_weight
-        
-        # 合并结果并按分数排序
-        all_results = {**{r.metadata.get("id"): r for r in results_a}, 
-                       **{r.metadata.get("id"): r for r in results_b}}
-        
-        sorted_docs = sorted(
-            doc_scores.items(), 
-            key=lambda x: x[1], 
-            reverse=True
-        )
-        
-        fused = []
-        for rank, (doc_id, score) in enumerate(sorted_docs):
-            if doc_id in all_results:
-                result = all_results[doc_id]
-                result.score = score
-                result.rank = rank + 1
-                fused.append(result)
-        
-        return fused
-```
-
-### 阶段四：LLM 模块开发（第 7-8 周）
-
-| 序号 | 任务 | 交付物 |
-|------|------|--------|
-| 4.1 | LLM 基类与工厂 | 统一接口、多模型支持 |
-| 4.2 | OpenAI 集成 | GPT-3.5/4 接口封装 |
-| 4.3 | Claude 集成 | Anthropic Claude 接口 |
-| 4.4 | 本地模型集成 | Ollama 本地模型支持 |
-| 4.5 | 流式输出 | Server-Sent Events 支持 |
-
-**代码示例 - LLM 调度器：**
-
-```python
-# llm/orchestrator.py
-"""LLM 调度模块 - 统一管理多模型调用"""
-from abc import ABC, abstractmethod
-from typing import AsyncIterator, Optional, List, Dict
-from dataclasses import dataclass
-import os
-
-
-@dataclass
-class LLMResponse:
-    """LLM 响应数据类"""
-    content: str           # 生成的文本内容
-    model: str             # 使用的模型名称
-    usage: Dict            # token 使用量
-    finish_reason: str     # 结束原因
-
-
-class BaseLLM(ABC):
-    """LLM 基类 - 定义统一接口"""
-    
-    @abstractmethod
-    async def generate(
-        self, 
-        prompt: str, 
-        **kwargs
-    ) -> LLMResponse:
-        """同步生成"""
-        pass
-    
-    @abstractmethod
-    async def stream_generate(
-        self, 
-        prompt: str, 
-        **kwargs
-    ) -> AsyncIterator[str]:
-        """流式生成"""
-        pass
-
-
-class OpenAILLM(BaseLLM):
-    """OpenAI LLM 实现类"""
-    
-    def __init__(
-        self, 
-        api_key: Optional[str] = None,
-        model: str = "gpt-3.5-turbo",
-        temperature: float = 0.7,
-        max_tokens: int = 2000
-    ):
-        """初始化 OpenAI LLM
-        
-        Args:
-            api_key: OpenAI API 密钥，默认从环境变量读取
-            model: 模型名称
-            temperature: 采样温度 (0-2)
-            max_tokens: 最大生成 token 数
-        """
-        from openai import AsyncOpenAI
-        
-        self.api_key = api_key or os.getenv("OPENAI_API_KEY")
-        self.model = model
-        self.temperature = temperature
-        self.max_tokens = max_tokens
-        
-        self.client = AsyncOpenAI(api_key=self.api_key)
-    
-    async def generate(
-        self, 
-        prompt: str, 
-        **kwargs
-    ) -> LLMResponse:
-        """同步生成"""
-        response = await self.client.chat.completions.create(
-            model=kwargs.get("model", self.model),
-            messages=[{"role": "user", "content": prompt}],
-            temperature=kwargs.get("temperature", self.temperature),
-            max_tokens=kwargs.get("max_tokens", self.max_tokens)
-        )
-        
-        return LLMResponse(
-            content=response.choices[0].message.content,
-            model=response.model,
-            usage=dict(response.usage),
-            finish_reason=response.choices[0].finish_reason
-        )
-    
-    async def stream_generate(
-        self, 
-        prompt: str, 
-        **kwargs
-    ) -> AsyncIterator[str]:
-        """流式生成"""
-        response = await self.client.chat.completions.create(
-            model=kwargs.get("model", self.model),
-            messages=[{"role": "user", "content": prompt}],
-            temperature=kwargs.get("temperature", self.temperature),
-            max_tokens=kwargs.get("max_tokens", self.max_tokens),
-            stream=True
-        )
-        
-        async for chunk in response:
-            if chunk.choices[0].delta.content:
-                yield chunk.choices[0].delta.content
-
-
-class LLMOrchestrator:
-    """LLM 调度器 - 工厂模式管理多模型
-    
-    根据配置动态选择 LLM 提供商，支持模型热切换
-    """
-    
-    _providers = {
-        "openai": OpenAILLM,
-        # "anthropic": AnthropicLLM,
-        # "ollama": OllamaLLM,
-    }
-    
-    def __init__(self, provider: str = "openai", **kwargs):
-        """初始化调度器
-        
-        Args:
-            provider: LLM 提供商名称
-            **kwargs: 传递给具体 LLM 类的参数
-        """
-        self.provider = provider
-        self.llm = self._create_llm(provider, **kwargs)
-    
-    def _create_llm(self, provider: str, **kwargs) -> BaseLLM:
-        """创建 LLM 实例"""
-        llm_class = self._providers.get(provider)
-        if not llm_class:
-            raise ValueError(f"不支持的 LLM 提供商: {provider}")
-        return llm_class(**kwargs)
-    
-    def switch_model(self, provider: str, **kwargs):
-        """切换 LLM 模型"""
-        self.provider = provider
-        self.llm = self._create_llm(provider, **kwargs)
-    
-    async def generate(self, prompt: str, **kwargs) -> LLMResponse:
-        """生成响应"""
-        return await self.llm.generate(prompt, **kwargs)
-    
-    async def stream_generate(self, prompt: str, **kwargs) -> AsyncIterator[str]:
-        """流式生成"""
-        return await self.llm.stream_generate(prompt, **kwargs)
-```
-
-### 阶段五：RAG 流程编排（第 9 周）
-
-| 序号 | 任务 | 交付物 |
-|------|------|--------|
-| 5.1 | RAG Pipeline | 完整的检索增强生成流程 |
-| 5.2 | Prompt 模板 | 结构化的提示词模板 |
-| 5.3 | 引用来源 | 追溯生成内容的来源 |
-| 5.4 | 缓存优化 | Redis 缓存查询结果 |
-
-**代码示例 - RAG Pipeline：**
-
-```python
-# application/rag_pipeline.py
-"""RAG 流程编排模块 - 整合检索与生成"""
-from typing import List, Dict, Any, Optional, AsyncIterator
-from dataclasses import dataclass
-from retrieval.hybrid_retriever import HybridRetriever, SearchResult
-from llm.orchestrator import LLMOrchestrator
-import jinja2
-
-
-@dataclass
-class RAGResponse:
-    """RAG 响应数据类"""
-    answer: str                     # 生成的回答
-    sources: List[SearchResult]     # 引用的来源
-    model: str                      # 使用的模型
-    query: str                      # 原始查询
-
-
-class RAGPipeline:
-    """RAG 流程编排器
-    
-    整合检索、上下文构建、LLM 生成的全流程
-    """
-    
-    def __init__(
-        self,
-        retriever: HybridRetriever,
-        llm_orchestrator: LLMOrchestrator,
-        embedder,
-        prompt_template: Optional[str] = None
-    ):
-        """初始化 RAG Pipeline
-        
-        Args:
-            retriever: 混合检索器实例
-            llm_orchestrator: LLM 调度器实例
-            embedder: 嵌入模型实例
-            prompt_template: 自定义提示词模板
-        """
-        self.retriever = retriever
-        self.llm = llm_orchestrator
-        self.embedder = embedder
-        
-        # 默认提示词模板
-        self.prompt_template = prompt_template or self._default_template()
-    
-    def _default_template(self) -> str:
-        """默认提示词模板"""
-        template_str = """你是一个专业的问答助手。请根据以下参考信息回答用户的问题。
-
-## 参考信息
-{% for source in sources %}
-[{{ loop.index }}] {{ source.content }}
-来源: {{ source.metadata }}
-{% endfor %}
-
-## 用户问题
-{{ query }}
-
-## 回答要求
-1. 仅根据提供的参考信息回答，不要编造信息
-2. 如果参考信息不足以回答问题，请明确说明
-3. 回答要清晰、准确、简洁
-4. 在回答中注明来源编号
-
-## 回答
-"""
-        return template_str
-    
-    async def chat(
-        self, 
-        query: str, 
-        top_k: int = 5,
-        stream: bool = False
-    ) -> RAGResponse | AsyncIterator[str]:
-        """执行 RAG 对话
-        
-        Args:
-            query: 用户查询
-            top_k: 检索结果数量
-            stream: 是否流式输出
-            
-        Returns:
-            RAGResponse 对象或流式文本迭代器
-        """
-        # Step 1: 将查询向量化
-        query_vector = self.embedder.embed_query(query)
-        
-        # Step 2: 检索相关文档
-        search_results = self.retriever.search(
-            query=query,
-            query_vector=query_vector,
-            filter_condition=None
-        )[:top_k]
-        
-        # Step 3: 构建上下文
-        context = self._build_context(search_results)
-        
-        # Step 4: 生成 prompt
-        prompt = self._build_prompt(query, search_results)
-        
-        # Step 5: 调用 LLM 生成
-        if stream:
-            # 流式输出
-            async def generate():
-                async for chunk in self.llm.stream_generate(prompt):
-                    yield chunk
-            return generate()
-        else:
-            response = await self.llm.generate(prompt)
-            return RAGResponse(
-                answer=response.content,
-                sources=search_results,
-                model=response.model,
-                query=query
-            )
-    
-    def _build_context(self, sources: List[SearchResult]) -> str:
-        """构建上下文文本"""
-        return "\n\n".join([
-            f"[{i+1}] {source.content}" 
-            for i, source in enumerate(sources)
-        ])
-    
-    def _build_prompt(self, query: str, sources: List[SearchResult]) -> str:
-        """渲染 prompt 模板"""
-        template = jinja2.Template(self.prompt_template)
-        return template.render(query=query, sources=sources)
-```
-
-### 阶段六：API 与 Web 界面开发（第 10-11 周）
-
-| 序号 | 任务 | 交付物 |
-|------|------|--------|
-| 6.1 | FastAPI 基础 | 路由、中间件、错误处理 |
-| 6.2 | REST API | 对话、检索、模型切换接口 |
-| 6.3 | WebSocket | 流式响应支持 |
-| 6.4 | Streamlit UI | 聊天界面、对话历史 |
-| 6.5 | 前端优化 | 样式、加载状态、引用展示 |
-
-**代码示例 - API 路由：**
-
-```python
-# api/routes.py
-"""API 路由模块 - FastAPI 路由定义"""
-from fastapi import APIRouter, HTTPException, WebSocket, WebSocketDisconnect
-from fastapi.responses import StreamingResponse
-from typing import List, Optional
-from pydantic import BaseModel
-from application.rag_pipeline import RAGPipeline
-
-
-router = APIRouter(prefix="/api/v1", tags=["RAG"])
-
-
-# ========== Pydantic 模型 ==========
-
-class ChatRequest(BaseModel):
-    """聊天请求模型"""
-    query: str
-    top_k: int = 5
-    stream: bool = False
-    model: Optional[str] = None
-
-
-class ChatResponse(BaseModel):
-    """聊天响应模型"""
-    answer: str
-    sources: List[dict]
-    model: str
-
-
-class SwitchModelRequest(BaseModel):
-    """切换模型请求"""
-    provider: str
-    model: str
-
-
-# ========== 路由端点 ==========
-
-@router.post("/chat", response_model=ChatResponse)
-async def chat(request: ChatRequest):
-    """RAG 聊天接口
-    
-    接收用户查询，返回检索增强后的回答
-    
     Args:
-        request: 聊天请求，包含查询内容、top_k、stream 等参数
-        
-    Returns:
-        包含回答内容和来源引用的响应
+        table_name: 数据库表名
+        batch_size: 批处理大小
     """
-    try:
-        # 获取或创建 pipeline 实例
-        pipeline = get_rag_pipeline()
-        
-        # 切换模型（如果指定）
-        if request.model:
-            pipeline.llm.switch_model(request.model)
-        
-        # 执行 RAG 对话
-        response = await pipeline.chat(
-            query=request.query,
-            top_k=request.top_k,
-            stream=request.stream
-        )
-        
-        # 序列化来源
-        sources = [
-            {
-                "content": s.content[:200] + "..." if len(s.content) > 200 else s.content,
-                "score": s.score,
-                "metadata": s.metadata
-            }
-            for s in response.sources
-        ]
-        
-        return ChatResponse(
-            answer=response.answer,
-            sources=sources,
-            model=response.model
-        )
-        
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    embedder = get_embedder()
+    vector_store = get_vector_store()
 
-
-@router.post("/chat/stream")
-async def chat_stream(request: ChatRequest):
-    """流式聊天接口
-    
-    使用 Server-Sent Events 实现流式输出
-    """
-    pipeline = get_rag_pipeline()
-    
-    if request.model:
-        pipeline.llm.switch_model(request.model)
-    
-    async def event_generator():
-        try:
-            async for chunk in await pipeline.chat(
-                query=request.query,
-                top_k=request.top_k,
-                stream=True
-            ):
-                # 发送数据帧
-                yield f"data: {chunk}\n\n"
-            
-            # 发送结束标记
-            yield "data: [DONE]\n\n"
-            
-        except Exception as e:
-            yield f"data: error: {str(e)}\n\n"
-    
-    return StreamingResponse(
-        event_generator(),
-        media_type="text/event-stream"
-    )
-
-
-@router.post("/model/switch")
-async def switch_model(request: SwitchModelRequest):
-    """切换 LLM 模型"""
-    pipeline = get_rag_pipeline()
-    pipeline.llm.switch_model(
-        provider=request.provider,
-        model=request.model
-    )
-    return {"status": "success", "model": request.model}
-
-
-# ========== 依赖注入 ==========
-
-_rag_pipeline: Optional[RAGPipeline] = None
-
-
-def get_rag_pipeline() -> RAGPipeline:
-    """获取 RAG Pipeline 实例（单例）"""
-    global _rag_pipeline
-    if _rag_pipeline is None:
-        # 实际应用中从依赖注入获取
-        raise HTTPException(status_code=500, detail="Pipeline 未初始化")
-    return _rag_pipeline
-```
-
-**代码示例 - Streamlit 前端：**
-
-```python
-# ui/app.py
-"""Streamlit 前端应用 - Web 聊天界面"""
-import streamlit as st
-import asyncio
-from typing import List, Dict
-import time
-
-
-def init_session_state():
-    """初始化会话状态"""
-    if "messages" not in st.session_state:
-        st.session_state.messages = []
-    
-    if "model" not in st.session_state:
-        st.session_state.model = "openai"
-
-
-def render_sidebar():
-    """渲染侧边栏"""
-    st.sidebar.title("⚙️ 系统设置")
-    
-    # 模型选择
-    model_provider = st.sidebar.selectbox(
-        "LLM 提供商",
-        ["openai", "anthropic", "ollama"],
-        index=0
-    )
-    
-    model_name = st.sidebar.selectbox(
-        "模型",
-        ["gpt-3.5-turbo", "gpt-4"] if model_provider == "openai" 
-        else ["claude-3-opus", "claude-3-sonnet"]
-    )
-    
-    # 检索参数
-    top_k = st.sidebar.slider("检索数量", 1, 10, 5)
-    
-    # 清空对话
-    if st.sidebar.button("🗑️ 清空对话历史"):
-        st.session_state.messages = []
-        st.rerun()
-    
-    return model_provider, model_name, top_k
-
-
-def render_chat_message(role: str, content: str, sources: List[Dict] = None):
-    """渲染单条聊天消息
-    
-    Args:
-        role: 角色 (user/assistant)
-        content: 消息内容
-        sources: 引用来源
-    """
-    with st.chat_message(role):
-        st.markdown(content)
-        
-        # 显示引用来源
-        if sources and role == "assistant":
-            with st.expander("📚 参考来源"):
-                for i, source in enumerate(sources, 1):
-                    st.markdown(f"""
-                    **{i}.** {source['content'][:150]}...
-                    
-                    相似度: `{source['score']:.2f}`
-                    """)
-
-
-async def call_api(query: str, model_provider: str, model_name: str, top_k: int):
-    """调用后端 API"""
-    import aiohttp
-    
-    async with aiohttp.ClientSession() as session:
-        async with session.post(
-            "http://localhost:8000/api/v1/chat",
-            json={
-                "query": query,
-                "model": model_name,
-                "top_k": top_k,
-                "stream": False
-            }
-        ) as resp:
-            return await resp.json()
-
-
-def main():
-    """主函数"""
-    st.set_page_config(
-        page_title="RAG 智能问答系统",
-        page_icon="💬",
-        layout="wide"
-    )
-    
-    # 初始化
-    init_session_state()
-    
-    # 渲染侧边栏
-    model_provider, model_name, top_k = render_sidebar()
-    
-    # 标题
-    st.title("💬 RAG 智能问答系统")
-    st.markdown("基于检索增强生成的大语言模型问答系统")
-    
-    # 渲染历史消息
-    for msg in st.session_state.messages:
-        render_chat_message(msg["role"], msg["content"], msg.get("sources"))
-    
-    # 用户输入
-    if prompt := st.chat_input("请输入您的问题..."):
-        # 显示用户消息
-        render_chat_message("user", prompt)
-        st.session_state.messages.append({"role": "user", "content": prompt})
-        
-        # 调用 API 获取回复
-        with st.chat_message("assistant"):
-            with st.spinner("🤔 思考中..."):
-                try:
-                    # 同步调用（实际使用异步）
-                    response = asyncio.run(
-                        call_api(prompt, model_provider, model_name, top_k)
-                    )
-                    
-                    answer = response.get("answer", "抱歉，生成回答失败")
-                    sources = response.get("sources", [])
-                    
-                    st.markdown(answer)
-                    
-                    # 显示引用
-                    if sources:
-                        with st.expander("📚 参考来源"):
-                            for i, s in enumerate(sources, 1):
-                                st.markdown(f"**{i}.** {s['content'][:200]}...")
-                    
-                    # 保存到历史
-                    st.session_state.messages.append({
-                        "role": "assistant", 
-                        "content": answer,
-                        "sources": sources
-                    })
-                    
-                except Exception as e:
-                    st.error(f"❌ 错误: {str(e)}")
+    # TODO: 从数据库读取数据
+    # TODO: 批量向量化
+    # TODO: 添加到向量存储
+    pass
 
 
 if __name__ == "__main__":
-    main()
+    import_documents("your_table")
 ```
 
-### 阶段七：测试与部署（第 12 周）
+### 5.2 查询预处理模块
 
-| 序号 | 任务 | 交付物 |
-|------|------|--------|
-| 7.1 | 单元测试 | 核心模块测试用例 |
-| 7.2 | 集成测试 | API 端到端测试 |
-| 7.3 | 性能测试 | 检索速度、并发能力 |
-| 7.4 | Docker 镜像 | 容器化部署配置 |
-| 7.5 | 部署文档 | 环境搭建、运行说明 |
+```python
+# retrieval/query_processor.py
+"""查询预处理模块 - 分词、同义词扩展、查询改写"""
+import jieba
+from typing import List
 
-**Docker 配置示例：**
 
-```dockerfile
-# Dockerfile
-FROM python:3.10-slim
+class QueryProcessor:
+    """查询处理器
 
-# 安装系统依赖
-RUN apt-get update && apt-get install -y \
-    gcc \
-    && rm -rf /var/lib/apt/lists/*
+    负责对用户查询进行预处理，提升检索效果。
+    """
 
-# 设置工作目录
-WORKDIR /app
+    def __init__(self, use_synonym: bool = True):
+        """初始化查询处理器
 
-# 复制依赖文件
-COPY pyproject.toml ./
+        Args:
+            use_synonym: 是否使用同义词扩展
+        """
+        self.use_synonym = use_synonym
 
-# 安装 Python 依赖
-RUN pip install --no-cache-dir -e .
+    def process(self, query: str) -> str:
+        """处理查询
 
-# 复制应用代码
-COPY . .
+        Args:
+            query: 原始查询文本
 
-# 暴露端口
-EXPOSE 8000
+        Returns:
+            处理后的查询文本
+        """
+        # 分词
+        tokens = self.tokenize(query)
+        # TODO: 同义词扩展
+        # TODO: 查询改写
+        return " ".join(tokens)
 
-# 启动命令
-CMD ["uvicorn", "api.main:app", "--host", "0.0.0.0", "--port", "8000"]
+    def tokenize(self, query: str) -> List[str]:
+        """中文分词
+
+        Args:
+            query: 查询文本
+
+        Returns:
+            分词后的词列表
+        """
+        return list(jieba.cut(query))
 ```
 
-```yaml
-# docker-compose.yml
-version: '3.8'
+### 5.3 Redis 缓存模块
 
-services:
-  # RAG API 服务
-  rag-api:
-    build: .
-    ports:
-      - "8000:8000"
-    environment:
-      - DATABASE_URL=${DATABASE_URL}
-      - OPENAI_API_KEY=${OPENAI_API_KEY}
-    volumes:
-      - ./data:/app/data
-    restart: unless-stopped
+```python
+# core/cache.py
+"""Redis 缓存模块 - 缓存查询结果"""
+import json
+from typing import Optional
+import redis
 
-  # Streamlit 前端
-  rag-ui:
-    image: streamlit
-    ports:
-      - "8501:8501"
-    volumes:
-      - ./ui:/app
-    command: streamlit run app.py
-    depends_on:
-      - rag-api
+from core.config import settings
+from core.logger import get_logger
 
-  # Redis 缓存
-  redis:
-    image: redis:7-alpine
-    ports:
-      - "6379:6379"
-    volumes:
-      - redis-data:/data
+logger = get_logger(__name__)
 
-volumes:
-  redis-data:
+
+class CacheManager:
+    """缓存管理器
+
+    使用 Redis 缓存查询结果，提升响应速度。
+    """
+
+    def __init__(self, redis_url: Optional[str] = None):
+        """初始化缓存管理器
+
+        Args:
+            redis_url: Redis 连接 URL
+        """
+        self.redis_url = redis_url or settings.redis_url
+        self._client = None
+
+    @property
+    def client(self):
+        """获取 Redis 客户端"""
+        if self._client is None and self.redis_url:
+            self._client = redis.from_url(self.redis_url)
+        return self._client
+
+    def get(self, key: str) -> Optional[dict]:
+        """获取缓存
+
+        Args:
+            key: 缓存键
+
+        Returns:
+            缓存值，不存在返回 None
+        """
+        if not self.client:
+            return None
+        try:
+            data = self.client.get(key)
+            return json.loads(data) if data else None
+        except Exception as e:
+            logger.warning(f"缓存获取失败: {e}")
+            return None
+
+    def set(self, key: str, value: dict, ttl: int = 3600) -> bool:
+        """设置缓存
+
+        Args:
+            key: 缓存键
+            value: 缓存值
+            ttl: 过期时间（秒）
+
+        Returns:
+            是否设置成功
+        """
+        if not self.client:
+            return False
+        try:
+            self.client.setex(key, ttl, json.dumps(value))
+            return True
+        except Exception as e:
+            logger.warning(f"缓存设置失败: {e}")
+            return False
+
+    def delete(self, key: str) -> bool:
+        """删除缓存"""
+        if not self.client:
+            return False
+        try:
+            self.client.delete(key)
+            return True
+        except Exception as e:
+            logger.warning(f"缓存删除失败: {e}")
+            return False
+
+
+# 全局缓存管理器
+cache_manager = CacheManager()
 ```
 
 ---
 
-## 五、开发时间线总览
+## 六、启动指南
 
+### 6.1 环境配置
+
+```bash
+# 1. 安装依赖
+uv sync
+
+# 2. 配置环境变量
+cp .env.example .env
+# 编辑 .env 文件，填写必要的配置
+
+# 3. 启动 API 服务
+./run.sh api
+
+# 4. 启动 Streamlit UI（可选）
+./run.sh ui
 ```
-┌────────────────────────────────────────────────────────────────────────┐
-│                         开发时间线 (12 周)                              │
-├──────┬──────┬──────┬──────┬──────┬──────┬──────┬──────┬──────┬──────┬──────┬──────┐
-│ W1   │ W2   │ W3   │ W4   │ W5   │ W6   │ W7   │ W8   │ W9   │ W10  │ W11  │ W12  │
-├──────┼──────┼──────┼──────┼──────┼──────┼──────┼──────┼──────┼──────┼──────┼──────┤
-│ 基础架构 │      │ 数据层    │      │ 检索模块  │      │ LLM模块  │      │ 流程编排│ API/Web│    │ 测试部署│
-│ 1.1-1.4    │  2.1-2.4  │  3.1-3.4  │  4.1-4.5 │  5.1-5.4 │  6.1-6.5  │ 7.1-7.5 │
-└──────┴──────┴──────┴──────┴──────┴──────┴──────┴──────┴──────┴──────┴──────┴──────┘
-                                              ↑
-                                         并行开发
-```
+
+### 6.2 API 文档
+
+启动后访问：http://localhost:8000/docs
+
+### 6.3 可用模型
+
+| 模型 | 说明 |
+|------|------|
+| deepseek-ai/DeepSeek-R1-Distill-Qwen-7B | 推理模型，适合复杂问题 |
+| Qwen/Qwen3-8B | 通用模型 |
+| Qwen/Qwen3-4B | 轻量级模型 |
 
 ---
 
-## 六、关键风险与应对
+## 七、关键风险与应对
 
 | 风险 | 影响 | 应对方案 |
 |------|------|----------|
 | 向量检索效果不佳 | 回答质量低 | 调优嵌入模型、添加查询改写 |
-| LLM API 成本高 | 运营成本上升 | 添加缓存、本地模型备选 |
-| 中文分词效果 | 检索准确性 | 使用专业中文分词库 |
+| LLM API 配额不足 | 服务不可用 | 使用免费配额、申请更多配额 |
+| 中文分词效果 | 检索准确性 | 使用专业中文分词库（jieba） |
 | 大并发性能 | 响应延迟 | 添加 Redis 缓存、异步队列 |
 | 数据安全 | 隐私泄露 | 数据脱敏、访问控制 |
 
 ---
 
-## 七、后续扩展方向
+## 八、后续扩展方向
 
-1. **多模态检索**：支持图片、PDF 内容的检索
-2. **Agent 能力**：支持工具调用、多轮对话
-3. **个性化**：用户偏好学习、对话风格定制
-4. **监控运维**：请求日志、指标监控、告警
+1. **Agent 能力**：支持工具调用、多轮对话
+2. **个性化**：用户偏好学习、对话风格定制
+3. **监控运维**：请求日志、指标监控、告警
+4. **本地部署**：支持 Ollama 本地模型
 
 ---
 
-*文档版本: v1.0*  
-*创建日期: 2024*
+*文档版本: v2.0*
+*更新日期: 2026-03-06*
