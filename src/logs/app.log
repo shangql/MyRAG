@@ -1,0 +1,12 @@
+2026-03-06 16:43:59 | INFO     | core.logger:setup_logging:71 - 日志系统初始化完成 | 级别: INFO
+2026-03-06 16:43:59 | INFO     | core.logger:setup_logging:73 - 日志文件: ./logs/app.log
+2026-03-06 16:43:59 | INFO     | api.main:lifespan:20 - RAG API 服务启动
+2026-03-06 16:43:59 | INFO     | data.database:_initialize:49 - 初始化数据库连接 | 类型: mysql | URL: 192.168.102.45:3306
+2026-03-06 16:43:59 | INFO     | data.database:_initialize:68 - 数据库连接池初始化完成
+2026-03-06 16:44:02 | INFO     | data.embedder:_load_model:145 - 加载嵌入模型: sentence-transformers/all-MiniLM-L6-v2 | 设备: mps
+2026-03-06 16:44:06 | INFO     | data.embedder:_load_model:147 - 嵌入模型加载完成
+2026-03-06 16:44:06 | INFO     | data.vector_store:_initialize_client:182 - ChromaDB 集合初始化完成: default
+2026-03-06 16:44:06 | INFO     | llm.orchestrator:__init__:781 - LLM 调度器初始化完成 | 提供商: modelscope | 模型: deepseek-ai/DeepSeek-R1-Distill-Qwen-7B
+2026-03-06 16:44:06 | INFO     | application.rag_pipeline:__init__:69 - RAG Pipeline 初始化完成
+2026-03-06 16:44:06 | INFO     | api.main:lifespan:34 - RAG Pipeline 初始化完成
+2026-03-06 16:44:06 | INFO     | api.main:lifespan:41 - RAG API 服务关闭

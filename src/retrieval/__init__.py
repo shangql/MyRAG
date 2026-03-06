@@ -7,6 +7,11 @@ from retrieval.hybrid_retriever import (
     VectorRetriever,
     create_hybrid_retriever,
 )
+from retrieval.query_processor import (
+    QueryProcessor,
+    QueryProcessResult,
+    get_query_processor,
+)
 
 __all__ = [
     "BaseRetriever",
@@ -15,4 +20,7 @@ __all__ = [
     "KeywordRetriever",
     "HybridRetriever",
     "create_hybrid_retriever",
+    "QueryProcessor",
+    "QueryProcessResult",
+    "get_query_processor",
 ]

@@ -7,6 +7,7 @@ from data.vector_store import (
     VectorStore,
     get_vector_store,
 )
+from data.importer import DataImporter, ImportConfig, create_importer
 
 __all__ = [
     # 数据库
@@ -21,4 +22,8 @@ __all__ = [
     "ChromaVectorStore",
     "FAISSVectorStore",
     "get_vector_store",
+    # 数据导入
+    "DataImporter",
+    "ImportConfig",
+    "create_importer",
 ]

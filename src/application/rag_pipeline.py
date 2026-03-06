@@ -8,7 +8,7 @@ from jinja2 import Template
 from core.config import settings
 from core.exceptions import PipelineError
 from core.logger import get_logger
-from llm.orchestrator import LLMOrchestrator, LLMResponse
+from llm.orchestrator import LLMOrchestrator, LLMResponse, Message
 from retrieval.hybrid_retriever import HybridRetriever, SearchResult
 
 logger = get_logger(__name__)
@@ -341,34 +341,37 @@ class SimpleRAGPipeline:
 def create_rag_pipeline(
     vector_store: Any,
     embedder: Any,
-    llm_provider: str = "openai",
+    llm_provider: Optional[str] = None,
     model: Optional[str] = None,
 ) -> RAGPipeline:
     """创建 RAG Pipeline 的工厂函数
-    
+
     Args:
         vector_store: 向量存储实例
         embedder: 嵌入模型实例
-        llm_provider: LLM 提供商
-        model: 模型名称
-        
+        llm_provider: LLM 提供商（默认从配置读取）
+        model: 模型名称（默认从配置读取）
+
     Returns:
         RAGPipeline: RAG Pipeline 实例
     """
     from retrieval.hybrid_retriever import create_hybrid_retriever
     from llm.orchestrator import LLMOrchestrator
-    
+
+    # 使用配置中的默认值
+    provider = llm_provider or settings.llm_provider
+
     # 创建检索器
     retriever = create_hybrid_retriever(
         vector_store=vector_store,
     )
-    
+
     # 创建 LLM 调度器
     llm = LLMOrchestrator(
-        provider=llm_provider,
+        provider=provider,
         model=model,
     )
-    
+
     # 创建 Pipeline
     return RAGPipeline(
         retriever=retriever,

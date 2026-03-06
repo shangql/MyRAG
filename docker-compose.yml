@@ -15,22 +15,24 @@ services:
     environment:
       # 数据库配置
       - DATABASE_URL=${DATABASE_URL:-mysql+pymysql://user:password@db:3306/rag_db}
-      
+
       # 向量存储配置
       - VECTOR_STORE_TYPE=${VECTOR_STORE_TYPE:-chroma}
       - PERSIST_DIRECTORY=/app/data/vector_store
-      
+
       # 嵌入模型配置
       - EMBEDDING_MODEL=${EMBEDDING_MODEL:-sentence-transformers/all-MiniLM-L6-v2}
       - EMBEDDING_DEVICE=${EMBEDDING_DEVICE:-cpu}
-      
-      # LLM 配置
-      - LLM_PROVIDER=${LLM_PROVIDER:-openai}
-      - OPENAI_API_KEY=${OPENAI_API_KEY}
-      - OPENAI_MODEL=${OPENAI_MODEL:-gpt-3.5-turbo}
-      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
-      - OLLAMA_BASE_URL=${OLLAMA_BASE_URL:-http://host.docker.internal:11434}
-      
+
+      # LLM 配置 (ModelScope)
+      - LLM_PROVIDER=${LLM_PROVIDER:-modelscope}
+      - MODELSCOPE_API_KEY=${MODELSCOPE_API_KEY}
+      - MODELSCOPE_MODEL=${MODELSCOPE_MODEL:-deepseek-ai/DeepSeek-R1-Distill-Qwen-7B}
+      - MODELSCOPE_BASE_URL=${MODELSCOPE_BASE_URL:-https://api-inference.modelscope.cn/v1}
+
+      # Redis 配置
+      - REDIS_URL=${REDIS_URL:-redis://redis:6379/0}
+
       # 日志配置
       - LOG_LEVEL=${LOG_LEVEL:-INFO}
     volumes:

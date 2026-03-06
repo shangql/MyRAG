@@ -1,4 +1,5 @@
 """LLM 模块 - 统一管理多模型调用"""
+
 import os
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
@@ -14,13 +15,14 @@ logger = get_logger(__name__)
 @dataclass
 class LLMResponse:
     """LLM 响应数据类
-    
+
     Attributes:
         content: 生成的文本内容
         model: 使用的模型名称
         usage: token 使用量统计
         finish_reason: 结束原因 (stop/length)
     """
+
     content: str
     model: str
     usage: Dict[str, int] = field(default_factory=dict)
@@ -30,14 +32,15 @@ class LLMResponse:
 @dataclass
 class Message:
     """聊天消息数据类
-    
+
     Attributes:
         role: 角色 (system/user/assistant)
         content: 消息内容
     """
+
     role: str
     content: str
-    
+
     def to_dict(self) -> Dict[str, str]:
         """转换为字典格式"""
         return {"role": self.role, "content": self.content}
@@ -45,7 +48,7 @@ class Message:
 
 class BaseLLM(ABC):
     """LLM 基类 - 定义统一接口"""
-    
+
     @abstractmethod
     async def generate(
         self,
@@ -53,16 +56,16 @@ class BaseLLM(ABC):
         **kwargs,
     ) -> LLMResponse:
         """同步生成
-        
+
         Args:
             prompt: 提示词
             **kwargs: 额外参数
-            
+
         Returns:
             LLMResponse: 响应对象
         """
         pass
-    
+
     @abstractmethod
     async def chat(
         self,
@@ -70,16 +73,16 @@ class BaseLLM(ABC):
         **kwargs,
     ) -> LLMResponse:
         """聊天模式生成
-        
+
         Args:
             messages: 消息列表
             **kwargs: 额外参数
-            
+
         Returns:
             LLMResponse: 响应对象
         """
         pass
-    
+
     @abstractmethod
     async def stream_generate(
         self,
@@ -87,16 +90,16 @@ class BaseLLM(ABC):
         **kwargs,
     ) -> AsyncIterator[str]:
         """流式生成
-        
+
         Args:
             prompt: 提示词
             **kwargs: 额外参数
-            
+
         Yields:
             str: 生成的文本片段
         """
         pass
-    
+
     @abstractmethod
     async def stream_chat(
         self,
@@ -104,11 +107,11 @@ class BaseLLM(ABC):
         **kwargs,
     ) -> AsyncIterator[str]:
         """流式聊天
-        
+
         Args:
             messages: 消息列表
             **kwargs: 额外参数
-            
+
         Yields:
             str: 生成的文本片段
         """
@@ -117,10 +120,10 @@ class BaseLLM(ABC):
 
 class OpenAILLM(BaseLLM):
     """OpenAI LLM 实现类
-    
+
     支持 GPT-3.5、GPT-4 等模型。
     """
-    
+
     def __init__(
         self,
         api_key: Optional[str] = None,
@@ -130,7 +133,7 @@ class OpenAILLM(BaseLLM):
         base_url: Optional[str] = None,
     ):
         """初始化 OpenAI LLM
-        
+
         Args:
             api_key: OpenAI API 密钥，默认从环境变量读取
             model: 模型名称
@@ -143,23 +146,24 @@ class OpenAILLM(BaseLLM):
         self.temperature = temperature
         self.max_tokens = max_tokens
         self.base_url = base_url
-        
+
         if not self.api_key:
             raise LLMAPIError("OpenAI API 密钥未设置", provider="openai")
-        
+
         self._client = None
-    
+
     @property
     def client(self):
         """延迟初始化客户端"""
         if self._client is None:
             from openai import AsyncOpenAI
+
             self._client = AsyncOpenAI(
                 api_key=self.api_key,
                 base_url=self.base_url,
             )
         return self._client
-    
+
     async def generate(
         self,
         prompt: str,
@@ -168,7 +172,7 @@ class OpenAILLM(BaseLLM):
         """同步生成"""
         messages = [Message(role="user", content=prompt)]
         return await self.chat(messages, **kwargs)
-    
+
     async def chat(
         self,
         messages: List[Message],
@@ -183,7 +187,7 @@ class OpenAILLM(BaseLLM):
                 max_tokens=kwargs.get("max_tokens", self.max_tokens),
                 stream=False,
             )
-            
+
             return LLMResponse(
                 content=response.choices[0].message.content or "",
                 model=response.model,
@@ -194,10 +198,10 @@ class OpenAILLM(BaseLLM):
                 },
                 finish_reason=response.choices[0].finish_reason,
             )
-            
+
         except Exception as e:
             self._handle_error(e)
-    
+
     async def stream_generate(
         self,
         prompt: str,
@@ -207,7 +211,7 @@ class OpenAILLM(BaseLLM):
         messages = [Message(role="user", content=prompt)]
         async for chunk in self.stream_chat(messages, **kwargs):
             yield chunk
-    
+
     async def stream_chat(
         self,
         messages: List[Message],
@@ -222,18 +226,18 @@ class OpenAILLM(BaseLLM):
                 max_tokens=kwargs.get("max_tokens", self.max_tokens),
                 stream=True,
             )
-            
+
             async for chunk in response:
                 if chunk.choices[0].delta.content:
                     yield chunk.choices[0].delta.content
-                    
+
         except Exception as e:
             self._handle_error(e)
-    
+
     def _handle_error(self, error: Exception) -> None:
         """处理 API 错误"""
         error_msg = str(error)
-        
+
         if "rate_limit" in error_msg.lower() or "429" in error_msg:
             raise LLMRateLimitError(
                 "OpenAI API 速率限制",
@@ -259,10 +263,10 @@ class OpenAILLM(BaseLLM):
 
 class AnthropicLLM(BaseLLM):
     """Anthropic Claude LLM 实现类
-    
+
     支持 Claude 3 系列模型。
     """
-    
+
     def __init__(
         self,
         api_key: Optional[str] = None,
@@ -271,7 +275,7 @@ class AnthropicLLM(BaseLLM):
         max_tokens: int = 2000,
     ):
         """初始化 Anthropic LLM
-        
+
         Args:
             api_key: Anthropic API 密钥，默认从环境变量读取
             model: 模型名称
@@ -282,22 +286,23 @@ class AnthropicLLM(BaseLLM):
         self.model = model
         self.temperature = temperature
         self.max_tokens = max_tokens
-        
+
         if not self.api_key:
             raise LLMAPIError("Anthropic API 密钥未设置", provider="anthropic")
-        
+
         self._client = None
-    
+
     @property
     def client(self):
         """延迟初始化客户端"""
         if self._client is None:
             import anthropic
+
             self._client = anthropic.AsyncAnthropic(
                 api_key=self.api_key,
             )
         return self._client
-    
+
     async def generate(
         self,
         prompt: str,
@@ -306,7 +311,7 @@ class AnthropicLLM(BaseLLM):
         """同步生成"""
         messages = [Message(role="user", content=prompt)]
         return await self.chat(messages, **kwargs)
-    
+
     async def chat(
         self,
         messages: List[Message],
@@ -318,13 +323,10 @@ class AnthropicLLM(BaseLLM):
             converted_messages = []
             for msg in messages:
                 if msg.role == "system":
-                    converted_messages.append({
-                        "role": "user",
-                        "content": f"System: {msg.content}"
-                    })
+                    converted_messages.append({"role": "user", "content": f"System: {msg.content}"})
                 else:
                     converted_messages.append({"role": msg.role, "content": msg.content})
-            
+
             response = await self.client.messages.create(
                 model=kwargs.get("model", self.model),
                 messages=converted_messages,
@@ -332,7 +334,7 @@ class AnthropicLLM(BaseLLM):
                 max_tokens=kwargs.get("max_tokens", self.max_tokens),
                 stream=False,
             )
-            
+
             return LLMResponse(
                 content=response.content[0].text,
                 model=response.model,
@@ -342,10 +344,10 @@ class AnthropicLLM(BaseLLM):
                 },
                 finish_reason="stop",
             )
-            
+
         except Exception as e:
             self._handle_error(e)
-    
+
     async def stream_generate(
         self,
         prompt: str,
@@ -355,7 +357,7 @@ class AnthropicLLM(BaseLLM):
         messages = [Message(role="user", content=prompt)]
         async for chunk in self.stream_chat(messages, **kwargs):
             yield chunk
-    
+
     async def stream_chat(
         self,
         messages: List[Message],
@@ -366,13 +368,10 @@ class AnthropicLLM(BaseLLM):
             converted_messages = []
             for msg in messages:
                 if msg.role == "system":
-                    converted_messages.append({
-                        "role": "user",
-                        "content": f"System: {msg.content}"
-                    })
+                    converted_messages.append({"role": "user", "content": f"System: {msg.content}"})
                 else:
                     converted_messages.append({"role": msg.role, "content": msg.content})
-            
+
             async with self.client.messages.stream(
                 model=kwargs.get("model", self.model),
                 messages=converted_messages,
@@ -381,14 +380,14 @@ class AnthropicLLM(BaseLLM):
             ) as stream:
                 async for text in stream.text_stream:
                     yield text
-                    
+
         except Exception as e:
             self._handle_error(e)
-    
+
     def _handle_error(self, error: Exception) -> None:
         """处理 API 错误"""
         error_msg = str(error)
-        
+
         if "rate_limit" in error_msg.lower() or "429" in error_msg:
             raise LLMRateLimitError(
                 "Anthropic API 速率限制",
@@ -403,10 +402,10 @@ class AnthropicLLM(BaseLLM):
 
 class OllamaLLM(BaseLLM):
     """Ollama 本地模型实现类
-    
+
     支持通过 Ollama 运行本地开源模型（Llama2、Qwen 等）。
     """
-    
+
     def __init__(
         self,
         base_url: str = "http://localhost:11434",
@@ -415,7 +414,7 @@ class OllamaLLM(BaseLLM):
         max_tokens: int = 2000,
     ):
         """初始化 Ollama LLM
-        
+
         Args:
             base_url: Ollama 服务地址
             model: 模型名称
@@ -426,7 +425,7 @@ class OllamaLLM(BaseLLM):
         self.model = model
         self.temperature = temperature
         self.max_tokens = max_tokens
-    
+
     async def generate(
         self,
         prompt: str,
@@ -434,11 +433,11 @@ class OllamaLLM(BaseLLM):
     ) -> LLMResponse:
         """同步生成"""
         import aiohttp
-        
+
         model = kwargs.get("model", self.model)
         temperature = kwargs.get("temperature", self.temperature)
         max_tokens = kwargs.get("max_tokens", self.max_tokens)
-        
+
         try:
             async with aiohttp.ClientSession() as session:
                 async with session.post(
@@ -458,7 +457,7 @@ class OllamaLLM(BaseLLM):
                             provider="ollama",
                             status_code=response.status,
                         )
-                    
+
                     result = await response.json()
                     return LLMResponse(
                         content=result.get("response", ""),
@@ -471,7 +470,7 @@ class OllamaLLM(BaseLLM):
                 f"无法连接到 Ollama 服务: {str(e)}",
                 provider="ollama",
             )
-    
+
     async def chat(
         self,
         messages: List[Message],
@@ -479,17 +478,14 @@ class OllamaLLM(BaseLLM):
     ) -> LLMResponse:
         """聊天模式生成"""
         import aiohttp
-        
+
         model = kwargs.get("model", self.model)
         temperature = kwargs.get("temperature", self.temperature)
         max_tokens = kwargs.get("max_tokens", self.max_tokens)
-        
+
         # 转换消息格式
-        ollama_messages = [
-            {"role": msg.role, "content": msg.content}
-            for msg in messages
-        ]
-        
+        ollama_messages = [{"role": msg.role, "content": msg.content} for msg in messages]
+
         try:
             async with aiohttp.ClientSession() as session:
                 async with session.post(
@@ -509,7 +505,7 @@ class OllamaLLM(BaseLLM):
                             provider="ollama",
                             status_code=response.status,
                         )
-                    
+
                     result = await response.json()
                     return LLMResponse(
                         content=result["message"]["content"],
@@ -522,7 +518,7 @@ class OllamaLLM(BaseLLM):
                 f"无法连接到 Ollama 服务: {str(e)}",
                 provider="ollama",
             )
-    
+
     async def stream_generate(
         self,
         prompt: str,
@@ -530,9 +526,9 @@ class OllamaLLM(BaseLLM):
     ) -> AsyncIterator[str]:
         """流式生成"""
         import aiohttp
-        
+
         model = kwargs.get("model", self.model)
-        
+
         try:
             async with aiohttp.ClientSession() as session:
                 async with session.post(
@@ -548,6 +544,7 @@ class OllamaLLM(BaseLLM):
                             data = line.decode().strip()
                             if data.startswith("data:"):
                                 import json
+
                                 try:
                                     result = json.loads(data[5:])
                                     if "response" in result:
@@ -559,7 +556,7 @@ class OllamaLLM(BaseLLM):
                 f"无法连接到 Ollama 服务: {str(e)}",
                 provider="ollama",
             )
-    
+
     async def stream_chat(
         self,
         messages: List[Message],
@@ -567,14 +564,11 @@ class OllamaLLM(BaseLLM):
     ) -> AsyncIterator[str]:
         """流式聊天"""
         import aiohttp
-        
+
         model = kwargs.get("model", self.model)
-        
-        ollama_messages = [
-            {"role": msg.role, "content": msg.content}
-            for msg in messages
-        ]
-        
+
+        ollama_messages = [{"role": msg.role, "content": msg.content} for msg in messages]
+
         try:
             async with aiohttp.ClientSession() as session:
                 async with session.post(
@@ -590,6 +584,7 @@ class OllamaLLM(BaseLLM):
                             data = line.decode().strip()
                             if data.startswith("data:"):
                                 import json
+
                                 try:
                                     result = json.loads(data[5:])
                                     if "message" in result and "content" in result["message"]:
@@ -603,23 +598,170 @@ class OllamaLLM(BaseLLM):
             )
 
 
+class ModelScopeLLM(BaseLLM):
+    """ModelScope / DashScope LLM 实现类 (OpenAI 兼容)
+
+    使用 OpenAI 兼容 API 调用 ModelScope 上的模型。
+    """
+
+    def __init__(
+        self,
+        api_key: Optional[str] = None,
+        model: str = "qwen-turbo",
+        temperature: float = 0.7,
+        max_tokens: int = 2000,
+        base_url: str = "https://api-inference.modelscope.cn/v1",
+    ):
+        """初始化 ModelScope LLM
+
+        Args:
+            api_key: ModelScope API 密钥
+            model: 模型名称 (qwen-turbo, qwen-plus, etc.)
+            temperature: 采样温度
+            max_tokens: 最大生成 token 数
+            base_url: API 基础地址
+        """
+        self.api_key = api_key
+        self.model = model
+        self.temperature = temperature
+        self.max_tokens = max_tokens
+        self.base_url = base_url
+
+        if not self.api_key:
+            raise LLMAPIError("ModelScope API 密钥未设置", provider="modelscope")
+
+        self._client = None
+
+    @property
+    def client(self):
+        """延迟初始化 OpenAI 兼容客户端"""
+        if self._client is None:
+            from openai import AsyncOpenAI
+
+            self._client = AsyncOpenAI(
+                api_key=self.api_key,
+                base_url=self.base_url,
+            )
+        return self._client
+
+    async def generate(
+        self,
+        prompt: str,
+        **kwargs,
+    ) -> LLMResponse:
+        """同步生成"""
+        messages = [Message(role="user", content=prompt)]
+        return await self.chat(messages, **kwargs)
+
+    async def chat(
+        self,
+        messages: List[Message],
+        **kwargs,
+    ) -> LLMResponse:
+        """聊天模式生成"""
+        try:
+            model = kwargs.get("model", self.model)
+            temperature = kwargs.get("temperature", self.temperature)
+            max_tokens = kwargs.get("max_tokens", self.max_tokens)
+
+            response = await self.client.chat.completions.create(
+                model=model,
+                messages=[msg.to_dict() for msg in messages],
+                temperature=temperature,
+                max_tokens=max_tokens,
+                stream=False,
+            )
+
+            return LLMResponse(
+                content=response.choices[0].message.content or "",
+                model=response.model,
+                usage={
+                    "prompt_tokens": response.usage.prompt_tokens,
+                    "completion_tokens": response.usage.completion_tokens,
+                    "total_tokens": response.usage.total_tokens,
+                },
+                finish_reason=response.choices[0].finish_reason,
+            )
+
+        except Exception as e:
+            self._handle_error(e)
+
+    async def stream_generate(
+        self,
+        prompt: str,
+        **kwargs,
+    ) -> AsyncIterator[str]:
+        """流式生成"""
+        messages = [Message(role="user", content=prompt)]
+        async for chunk in self.stream_chat(messages, **kwargs):
+            yield chunk
+
+    async def stream_chat(
+        self,
+        messages: List[Message],
+        **kwargs,
+    ) -> AsyncIterator[str]:
+        """流式聊天"""
+        try:
+            model = kwargs.get("model", self.model)
+            temperature = kwargs.get("temperature", self.temperature)
+            max_tokens = kwargs.get("max_tokens", self.max_tokens)
+
+            response = await self.client.chat.completions.create(
+                model=model,
+                messages=[msg.to_dict() for msg in messages],
+                temperature=temperature,
+                max_tokens=max_tokens,
+                stream=True,
+            )
+
+            async for chunk in response:
+                if chunk.choices[0].delta.content:
+                    yield chunk.choices[0].delta.content
+
+        except Exception as e:
+            self._handle_error(e)
+
+    def _handle_error(self, error: Exception) -> None:
+        """处理 API 错误"""
+        error_msg = str(error)
+
+        if "rate_limit" in error_msg.lower() or "429" in error_msg:
+            raise LLMRateLimitError(
+                "ModelScope API 速率限制",
+                provider="modelscope",
+            )
+        elif "authentication" in error_msg.lower() or "401" in error_msg:
+            raise LLMAPIError(
+                "ModelScope API 认证失败",
+                provider="modelscope",
+                status_code=401,
+            )
+        else:
+            raise LLMAPIError(
+                f"ModelScope API 调用失败: {error_msg}",
+                provider="modelscope",
+            )
+
+
 class LLMOrchestrator:
     """LLM 调度器 - 工厂模式管理多模型
-    
+
     根据配置动态选择 LLM 提供商，支持模型热切换。
-    
+
     Attributes:
         provider: 当前 LLM 提供商
         model: 当前模型名称
     """
-    
+
     # 提供商映射
     _providers: Dict[str, type] = {
         "openai": OpenAILLM,
         "anthropic": AnthropicLLM,
         "ollama": OllamaLLM,
+        "modelscope": ModelScopeLLM,
     }
-    
+
     def __init__(
         self,
         provider: Optional[str] = None,
@@ -627,7 +769,7 @@ class LLMOrchestrator:
         **kwargs,
     ):
         """初始化调度器
-        
+
         Args:
             provider: LLM 提供商名称 (openai/anthropic/ollama)
             model: 模型名称
@@ -637,7 +779,7 @@ class LLMOrchestrator:
         self.model = model or self._get_default_model()
         self.llm = self._create_llm(self.provider, self.model, **kwargs)
         logger.info(f"LLM 调度器初始化完成 | 提供商: {self.provider} | 模型: {self.model}")
-    
+
     def _get_default_model(self) -> str:
         """获取默认模型"""
         if self.provider == "openai":
@@ -646,8 +788,10 @@ class LLMOrchestrator:
             return settings.anthropic_model
         elif self.provider == "ollama":
             return settings.ollama_model
+        elif self.provider == "modelscope":
+            return settings.modelscope_model
         return "gpt-3.5-turbo"
-    
+
     def _create_llm(
         self,
         provider: str,
@@ -661,23 +805,26 @@ class LLMOrchestrator:
                 f"不支持的 LLM 提供商: {provider}",
                 provider=provider,
             )
-        
+
         # 合并配置
         config = {
             "model": model,
             "temperature": kwargs.get("temperature", settings.llm_temperature),
             "max_tokens": kwargs.get("max_tokens", settings.llm_max_tokens),
         }
-        
+
         if provider == "openai":
             config["api_key"] = kwargs.get("api_key") or settings.openai_api_key
         elif provider == "anthropic":
             config["api_key"] = kwargs.get("api_key") or settings.anthropic_api_key
         elif provider == "ollama":
             config["base_url"] = kwargs.get("base_url") or settings.ollama_base_url
-        
+        elif provider == "modelscope":
+            config["api_key"] = kwargs.get("api_key") or settings.modelscope_api_key
+            config["base_url"] = kwargs.get("base_url") or settings.modelscope_base_url
+
         return llm_class(**config)
-    
+
     def switch_model(
         self,
         provider: Optional[str] = None,
@@ -685,7 +832,7 @@ class LLMOrchestrator:
         **kwargs,
     ) -> None:
         """切换 LLM 模型
-        
+
         Args:
             provider: 新的 LLM 提供商
             model: 新的模型名称
@@ -695,19 +842,19 @@ class LLMOrchestrator:
         self.model = model or self._get_default_model()
         self.llm = self._create_llm(self.provider, self.model, **kwargs)
         logger.info(f"模型切换完成 | 提供商: {self.provider} | 模型: {self.model}")
-    
+
     async def generate(self, prompt: str, **kwargs) -> LLMResponse:
         """生成响应"""
         return await self.llm.generate(prompt, **kwargs)
-    
+
     async def chat(self, messages: List[Message], **kwargs) -> LLMResponse:
         """聊天模式生成"""
         return await self.llm.chat(messages, **kwargs)
-    
+
     async def stream_generate(self, prompt: str, **kwargs) -> AsyncIterator[str]:
         """流式生成"""
         return await self.llm.stream_generate(prompt, **kwargs)
-    
+
     async def stream_chat(self, messages: List[Message], **kwargs) -> AsyncIterator[str]:
         """流式聊天"""
         return await self.llm.stream_chat(messages, **kwargs)
@@ -715,7 +862,7 @@ class LLMOrchestrator:
 
 def get_llm_orchestrator() -> LLMOrchestrator:
     """获取 LLM 调度器单例
-    
+
     Returns:
         LLMOrchestrator: LLM 调度器实例
     """

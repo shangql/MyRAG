@@ -1,34 +1,12 @@
-2026-03-06 14:36:39 | INFO     | core.logger:setup_logging:71 - 日志系统初始化完成 | 级别: INFO
-2026-03-06 14:36:39 | INFO     | core.logger:setup_logging:73 - 日志文件: ./logs/app.log
-2026-03-06 14:36:39 | INFO     | __main__:main:38 - 启动 API 服务: 0.0.0.0:8000
-2026-03-06 14:36:39 | INFO     | core.logger:setup_logging:71 - 日志系统初始化完成 | 级别: INFO
-2026-03-06 14:36:39 | INFO     | core.logger:setup_logging:73 - 日志文件: ./logs/app.log
-2026-03-06 14:36:39 | INFO     | api.main:lifespan:20 - RAG API 服务启动
-2026-03-06 14:36:40 | INFO     | data.database:_initialize:49 - 初始化数据库连接 | 类型: mysql | URL: localhost:3306
-2026-03-06 14:36:41 | INFO     | data.database:_initialize:68 - 数据库连接池初始化完成
-2026-03-06 14:36:49 | WARNING  | api.main:lifespan:36 - RAG Pipeline 初始化失败: name 'nn' is not defined
-2026-03-06 14:37:09 | INFO     | core.logger:setup_logging:71 - 日志系统初始化完成 | 级别: INFO
-2026-03-06 14:37:09 | INFO     | core.logger:setup_logging:73 - 日志文件: ./logs/app.log
-2026-03-06 14:37:09 | INFO     | __main__:main:38 - 启动 API 服务: 0.0.0.0:8000
-2026-03-06 14:37:09 | INFO     | core.logger:setup_logging:71 - 日志系统初始化完成 | 级别: INFO
-2026-03-06 14:37:09 | INFO     | core.logger:setup_logging:73 - 日志文件: ./logs/app.log
-2026-03-06 14:37:09 | INFO     | api.main:lifespan:20 - RAG API 服务启动
-2026-03-06 14:37:10 | INFO     | data.database:_initialize:49 - 初始化数据库连接 | 类型: mysql | URL: localhost:3306
-2026-03-06 14:37:10 | INFO     | data.database:_initialize:68 - 数据库连接池初始化完成
-2026-03-06 14:37:13 | WARNING  | api.main:lifespan:36 - RAG Pipeline 初始化失败: name 'nn' is not defined
-2026-03-06 14:37:13 | INFO     | api.main:lifespan:41 - RAG API 服务关闭
-2026-03-06 14:40:20 | INFO     | core.logger:setup_logging:71 - 日志系统初始化完成 | 级别: INFO
-2026-03-06 14:40:20 | INFO     | core.logger:setup_logging:73 - 日志文件: ./logs/app.log
-2026-03-06 14:40:20 | INFO     | __main__:main:38 - 启动 API 服务: 0.0.0.0:8000
-2026-03-06 14:40:20 | INFO     | core.logger:setup_logging:71 - 日志系统初始化完成 | 级别: INFO
-2026-03-06 14:40:20 | INFO     | core.logger:setup_logging:73 - 日志文件: ./logs/app.log
-2026-03-06 14:40:20 | INFO     | api.main:lifespan:20 - RAG API 服务启动
-2026-03-06 14:40:20 | INFO     | data.database:_initialize:49 - 初始化数据库连接 | 类型: mysql | URL: localhost:3306
-2026-03-06 14:40:20 | INFO     | data.database:_initialize:68 - 数据库连接池初始化完成
-2026-03-06 14:40:23 | INFO     | data.embedder:_load_model:145 - 加载嵌入模型: sentence-transformers/all-MiniLM-L6-v2 | 设备: mps
-2026-03-06 14:40:26 | INFO     | data.embedder:_load_model:147 - 嵌入模型加载完成
-2026-03-06 14:40:27 | INFO     | data.vector_store:_initialize_client:182 - ChromaDB 集合初始化完成: default
-2026-03-06 14:40:27 | INFO     | llm.orchestrator:__init__:639 - LLM 调度器初始化完成 | 提供商: openai | 模型: gpt-3.5-turbo
-2026-03-06 14:40:27 | INFO     | application.rag_pipeline:__init__:69 - RAG Pipeline 初始化完成
-2026-03-06 14:40:27 | INFO     | api.main:lifespan:34 - RAG Pipeline 初始化完成
-2026-03-06 14:40:35 | INFO     | api.main:lifespan:41 - RAG API 服务关闭
+2026-03-06 16:01:57 | INFO     | core.logger:setup_logging:71 - 日志系统初始化完成 | 级别: INFO
+2026-03-06 16:01:57 | INFO     | core.logger:setup_logging:73 - 日志文件: ./logs/app.log
+2026-03-06 16:01:57 | INFO     | __main__:main:38 - 启动 API 服务: 0.0.0.0:8000
+2026-03-06 16:01:57 | INFO     | core.logger:setup_logging:71 - 日志系统初始化完成 | 级别: INFO
+2026-03-06 16:01:57 | INFO     | core.logger:setup_logging:73 - 日志文件: ./logs/app.log
+2026-03-06 16:01:57 | INFO     | api.main:lifespan:20 - RAG API 服务启动
+2026-03-06 16:01:58 | INFO     | data.database:_initialize:49 - 初始化数据库连接 | 类型: mysql | URL: 192.168.102.45:3306
+2026-03-06 16:01:58 | INFO     | data.database:_initialize:68 - 数据库连接池初始化完成
+2026-03-06 16:02:00 | INFO     | data.embedder:_load_model:145 - 加载嵌入模型: sentence-transformers/all-MiniLM-L6-v2 | 设备: mps
+2026-03-06 16:02:03 | INFO     | data.embedder:_load_model:147 - 嵌入模型加载完成
+2026-03-06 16:02:04 | INFO     | data.vector_store:_initialize_client:182 - ChromaDB 集合初始化完成: default
+2026-03-06 16:02:04 | WARNING  | api.main:lifespan:36 - RAG Pipeline 初始化失败: OpenAI API 密钥未设置 | provider=openai

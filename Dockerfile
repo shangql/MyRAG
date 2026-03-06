@@ -33,4 +33,4 @@ RUN mkdir -p /app/data/vector_store /app/logs
 EXPOSE 8000 8501
 
 # 启动命令（默认启动 API 服务）
-CMD ["python", "main.py", "api", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["python", "main.py", "--host", "0.0.0.0", "--port", "8000"]
