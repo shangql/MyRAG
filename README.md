@@ -4,8 +4,8 @@
 
 ## 功能特性
 
-- **混合检索**：向量检索 + 关键词检索（RRF 融合算法）
-- **多模型支持**：OpenAI GPT、Claude、Ollama 本地模型
+- **文件解析**：支持 TXT、Markdown、PDF、DOCX、XLSX、CSV、HTML 等多种格式
+- **多模型支持**：ModelScope（DeepSeek Qwen 系列）、OpenAI GPT、Anthropic Claude、Ollama 本地模型
 - **Web 界面**：原生 HTML/JS 聊天界面，支持流式输出
 - **REST API**：FastAPI 高性能接口
 - **向量存储**：支持 ChromaDB 和 FAISS
@@ -15,7 +15,7 @@
 
 ### 环境要求
 
-- Python 3.10+
+- Python 3.12+
 - uv 包管理工具（推荐）
 
 ### 安装步骤
@@ -24,8 +24,8 @@
 # 1. 克隆项目
 cd MyRAG
 
-# 2. 创建虚拟环境
-uv venv .venv
+# 2. 创建虚拟环境（使用 Python 3.12）
+uv venv .venv --python 3.12
 
 # 3. 激活虚拟环境
 source .venv/bin/activate
@@ -42,28 +42,11 @@ cp .env.example .env
 ### 运行服务
 
 ```bash
-# 方式一：使用 Python 直接运行
-
 # 启动 API 服务
-python main.py api --host 0.0.0.0 --port 8000
-
-# 启动 Web 界面（新终端）
-python main.py ui
-
-
-# 方式二：使用 Docker
-
-# 构建并启动所有服务
-docker-compose up -d
-
-# 查看日志
-docker-compose logs -f
-
-
-# 方式三：分别启动
-
-# 启动 API
 ./run.sh
+
+# 访问 Web 界面
+http://localhost:8000
 ```
 
 ### 访问地址
@@ -81,20 +64,24 @@ docker-compose logs -f
 
 | 变量 | 说明 | 默认值 |
 |------|------|--------|
-| `DATABASE_URL` | 数据库连接 URL | mysql+pymysql://user:password@localhost:3306/rag_db |
+| `DATABASE_URL` | 数据库连接 URL | mysql+pymysql://rag_db:password@192.168.102.45:3306/rag_db |
 | `VECTOR_STORE_TYPE` | 向量存储类型 | chroma |
 | `EMBEDDING_MODEL` | 嵌入模型 | sentence-transformers/all-MiniLM-L6-v2 |
-| `LLM_PROVIDER` | LLM 提供商 | openai |
+| `LLM_PROVIDER` | LLM 默认提供商 | modelscope |
 | `OPENAI_API_KEY` | OpenAI API 密钥 | - |
+| `MODELSCOPE_API_KEY` | ModelScope API 密钥 | - |
+| `ANTHROPIC_API_KEY` | Anthropic API 密钥 | - |
 | `TOP_K` | 检索结果数量 | 5 |
 
 ### 支持的 LLM
 
-| 提供商 | 模型示例 | 需要配置 |
-|--------|----------|----------|
-| OpenAI | gpt-3.5-turbo, gpt-4 | OPENAI_API_KEY |
-| Anthropic | claude-3-sonnet | ANTHROPIC_API_KEY |
-| Ollama | llama2, qwen | OLLAMA_BASE_URL |
+| 提供商 | 模型示例 | 说明 |
+|--------|----------|------|
+| **ModelScope** | deepseek-ai/DeepSeek-R1-Distill-Qwen-7B | 默认推荐 |
+| **ModelScope** | Qwen/Qwen2-7B-Instruct | 支持 |
+| OpenAI | gpt-3.5-turbo, gpt-4 | 需要 OPENAI_API_KEY |
+| Anthropic | claude-3-sonnet | 需要 ANTHROPIC_API_KEY |
+| Ollama | llama2, qwen | 需要 OLLAMA_BASE_URL |
 
 ## 项目结构
 
@@ -108,7 +95,8 @@ MyRAG/
 │   ├── data/          # 数据层
 │   │   ├── database.py  # 数据库连接
 │   │   ├── embedder.py  # 嵌入模型
-│   │   └── vector_store.py  # 向量存储
+│   │   ├── vector_store.py  # 向量存储
+│   │   └── file_model.py  # 文件数据模型
 │   ├── retrieval/     # 检索模块
 │   │   └── hybrid_retriever.py  # 混合检索
 │   ├── llm/          # LLM 模块
@@ -116,16 +104,20 @@ MyRAG/
 │   ├── application/  # 应用层
 │   │   └── rag_pipeline.py  # RAG 流程
 │   ├── api/          # API 层
-│   │   ├── main.py
-│   │   ├── routes.py
-│   │   └── schemas.py
+│   │   ├── main.py   # FastAPI 应用
+│   │   ├── routes.py # API 路由
+│   │   ├── parser.py # 文件解析器
+│   │   └── schemas.py # 数据模型
 │   └── ui/           # 前端界面
-│       └── app.py
+│       └── templates/ # HTML 模板
+├── data/
+│   ├── uploads/      # 上传文件存储
+│   └── vector_store/ # ChromaDB 向量存储
 ├── tests/            # 测试文件
-├── docker-compose.yml  # Docker 编排
-├── Dockerfile         # Docker 镜像
-├── pyproject.toml     # 项目配置
-└── main.py            # 入口文件
+├── run.sh            # 启动脚本
+├── docker-compose.yml # Docker 编排
+├── pyproject.toml    # 项目配置
+└── .env              # 环境配置
 ```
 
 ## API 使用
@@ -137,8 +129,9 @@ curl -X POST http://localhost:8000/api/v1/chat \
   -H "Content-Type: application/json" \
   -d '{
     "query": "什么是机器学习？",
-    "top_k": 5,
-    "model": "gpt-3.5-turbo"
+    "provider": "modelscope",
+    "model": "deepseek-ai/DeepSeek-R1-Distill-Qwen-7B",
+    "top_k": 5
   }'
 ```
 
@@ -154,7 +147,7 @@ curl -X POST http://localhost:8000/api/v1/chat \
       "metadata": {"source": "wiki"}
     }
   ],
-  "model": "gpt-3.5-turbo",
+  "model": "deepseek-ai/DeepSeek-R1-Distill-Qwen-7B",
   "query": "什么是机器学习？"
 }
 ```
@@ -166,20 +159,43 @@ curl -X POST http://localhost:8000/api/v1/chat/stream \
   -H "Content-Type: application/json" \
   -d '{
     "query": "解释一下深度学习",
+    "provider": "modelscope",
     "stream": true
   }'
 ```
 
-### 切换模型
+### 文件上传
 
 ```bash
-curl -X POST http://localhost:8000/api/v1/model/switch \
-  -H "Content-Type: application/json" \
-  -d '{
-    "provider": "openai",
-    "model": "gpt-4"
-  }'
+curl -X POST http://localhost:8000/api/v1/files/upload \
+  -F "file=@/path/to/document.xlsx"
 ```
+
+### 文件列表
+
+```bash
+curl http://localhost:8000/api/v1/files
+```
+
+### 导入向量库
+
+```bash
+curl -X POST http://localhost:8000/api/v1/files/1/import
+```
+
+## 支持的文件格式
+
+| 格式 | 扩展名 | 说明 |
+|------|--------|------|
+| 纯文本 | .txt | 直接读取内容 |
+| Markdown | .md, .markdown | 转换为 HTML 后提取文本 |
+| PDF | .pdf | 使用 pypdf 提取文本 |
+| Word | .docx | 使用 python-docx 提取文本 |
+| Excel | .xlsx, .xls | 使用 pandas 提取所有 Sheet |
+| CSV | .csv | 使用 pandas 解析 |
+| HTML | .html, .htm | 使用 BeautifulSoup 提取文本 |
+| 图片 | .jpg, .png | 使用 OCR 提取文字 |
+| 邮件 | .eml | 提取邮件主题和正文 |
 
 ## 开发指南
 
@@ -218,28 +234,28 @@ pytest --cov=src --cov-report=html
 pytest --lf
 ```
 
-### 添加数据
-
-```python
-from src.data import get_embedder, get_vector_store
-from src.application import create_rag_pipeline
-
-# 初始化组件
-embedder = get_embedder()
-vector_store = get_vector_store()
-
-# 添加文档
-documents = [
-    {"id": "doc1", "content": "Python 是一种高级编程语言...", "metadata": {"source": "wiki"}},
-    {"id": "doc2", "content": "机器学习是人工智能的分支...", "metadata": {"source": "wiki"}},
-]
-
-# 创建 Pipeline 并添加
-pipeline = create_rag_pipeline(vector_store, embedder)
-await pipeline.add_documents(documents)
-```
-
 ## 常见问题
+
+### Q: LLM 调用失败？
+
+A: 检查：
+1. 是否配置了正确的 API Key（ModelScope / OpenAI / Anthropic）
+2. 网络是否能访问 API 服务
+3. 查看日志 `src/logs/app.log`
+
+### Q: 文件上传失败？
+
+A: 检查：
+1. 数据库连接是否正常
+2. 上传目录是否有写权限
+3. 文件大小是否超出限制
+
+### Q: Excel 文件解析失败？
+
+A: 确保已安装 openpyxl：
+```bash
+uv pip install openpyxl
+```
 
 ### Q: 向量检索效果不好？
 
@@ -248,17 +264,6 @@ A: 尝试：
 2. 修改 `TOP_K` 参数
 3. 调整向量检索和关键词检索的权重
 
-### Q: API 响应慢？
-
-A: 优化建议：
-1. 使用本地模型（Ollama）
-2. 启用 Redis 缓存
-3. 增加向量数据库索引
-
-### Q: 如何添加更多数据源？
-
-A: 参考 `src/data/database.py` 实现新的数据连接器。
-
 ## 技术栈
 
 | 类别 | 技术 |
@@ -266,8 +271,9 @@ A: 参考 `src/data/database.py` 实现新的数据连接器。
 | Web 框架 | FastAPI + 原生 HTML |
 | 向量存储 | ChromaDB, FAISS |
 | 嵌入模型 | sentence-transformers |
-| LLM | OpenAI, Anthropic, Ollama |
-| 数据库 | SQLAlchemy, MySQL, PostgreSQL |
+| LLM | ModelScope, OpenAI, Anthropic, Ollama |
+| 数据库 | SQLAlchemy, MySQL |
+| 文件解析 | pandas, openpyxl, pypdf, python-docx |
 | 测试 | pytest, pytest-asyncio |
 
 ## 许可证
