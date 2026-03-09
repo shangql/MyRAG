@@ -6,7 +6,7 @@
 
 - **混合检索**：向量检索 + 关键词检索（RRF 融合算法）
 - **多模型支持**：OpenAI GPT、Claude、Ollama 本地模型
-- **Web 界面**：Streamlit 聊天界面，支持流式输出
+- **Web 界面**：原生 HTML/JS 聊天界面，支持流式输出
 - **REST API**：FastAPI 高性能接口
 - **向量存储**：支持 ChromaDB 和 FAISS
 - **类型安全**：完整的类型注解和 Pydantic 验证
@@ -62,19 +62,16 @@ docker-compose logs -f
 
 # 方式三：分别启动
 
-# 终端 1：启动 API
-uvicorn src.api.main:app --reload --port 8000
-
-# 终端 2：启动 Streamlit
-streamlit run src/ui/app.py
+# 启动 API
+./run.sh
 ```
 
 ### 访问地址
 
 | 服务 | 地址 |
 |------|------|
+| Web 界面 | http://localhost:8000 |
 | API 文档 | http://localhost:8000/docs |
-| Streamlit 界面 | http://localhost:8501 |
 
 ## 配置说明
 
@@ -266,7 +263,7 @@ A: 参考 `src/data/database.py` 实现新的数据连接器。
 
 | 类别 | 技术 |
 |------|------|
-| Web 框架 | FastAPI, Streamlit |
+| Web 框架 | FastAPI + 原生 HTML |
 | 向量存储 | ChromaDB, FAISS |
 | 嵌入模型 | sentence-transformers |
 | LLM | OpenAI, Anthropic, Ollama |

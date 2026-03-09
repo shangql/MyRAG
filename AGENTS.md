@@ -34,10 +34,7 @@ uv pip install -e .
 python main.py
 
 # FastAPI 开发服务器
-uvicorn main:app --reload --port 8000
-
-# Streamlit Web 界面
-streamlit run ui/app.py
+./run.sh
 ```
 
 ### 2.3 代码检查

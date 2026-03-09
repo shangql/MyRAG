@@ -43,21 +43,6 @@ services:
       - db
       - redis
 
-  # Streamlit Web 界面
-  rag-ui:
-    image: streamlit:latest
-    container_name: myrag-ui
-    ports:
-      - "8501:8501"
-    environment:
-      - API_BASE_URL=http://rag-api:8000
-    volumes:
-      - ./src/ui:/app/ui
-    command: streamlit run ui/app.py
-    restart: unless-stopped
-    depends_on:
-      - rag-api
-
   # MySQL 数据库
   db:
     image: mysql:8.0
