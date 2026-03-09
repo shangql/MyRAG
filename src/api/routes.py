@@ -52,9 +52,39 @@ async def chat(request: ChatRequest):
     """RAG 聊天接口
 
     接收用户查询，返回检索增强后的回答
+    如果 RAG Pipeline 未初始化，则使用纯 LLM 回答
     """
+    # 如果 RAG Pipeline 未初始化，使用纯 LLM 模式
     if _rag_pipeline is None:
-        raise HTTPException(status_code=500, detail="RAG Pipeline 未初始化")
+        from llm.orchestrator import LLMOrchestrator, Message
+        from core.logger import get_logger
+
+        logger = get_logger(__name__)
+
+        try:
+            orchestrator = LLMOrchestrator()
+            if request.provider or request.model:
+                orchestrator.switch_model(
+                    provider=request.provider or "modelscope",
+                    model=request.model or "deepseek-ai/DeepSeek-R1-Distill-Qwen-7B",
+                )
+
+            # 直接使用 LLM 回答（无 RAG）
+            messages = [Message(role="user", content=request.query)]
+            response = await orchestrator.chat(
+                messages=messages,
+                stream=False,
+            )
+
+            return ChatResponse(
+                answer=response.content,
+                sources=[],
+                model=orchestrator.model,
+                query=request.query,
+            )
+        except Exception as e:
+            logger.error(f"LLM 调用失败: {e}")
+            raise HTTPException(status_code=500, detail=f"LLM 调用失败: {str(e)}")
 
     # 切换模型（如果提供了 provider 或 model）
     if request.provider or request.model:

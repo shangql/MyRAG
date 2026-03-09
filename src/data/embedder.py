@@ -3,6 +3,23 @@
 from typing import List, Optional
 
 import numpy as np
+
+# 在导入 sentence_transformers 之前修复 torch 兼容性问题
+import os
+
+os.environ["USE_TF"] = "0"  # 禁用 TensorFlow
+os.environ["TRANSFORMERS_NO_TF"] = "1"
+
+# 手动导入 torch.nn 以修复 transformers 的导入问题
+import torch
+import torch.nn as nn
+import sys
+
+# 缓存已导入的模块，防止重复加载
+if "transformers.integrations.accelerate" not in sys.modules:
+    # 预加载 transformers 避免循环导入问题
+    import transformers.integrations
+
 from pydantic import BaseModel, Field, field_validator
 from sentence_transformers import SentenceTransformer
 
