@@ -163,12 +163,13 @@ async def add_texts(request: TextAddRequest):
 
     try:
         import uuid
+        import time
         ids = [str(uuid.uuid4()) for _ in request.texts]
-        # 确保 metadata 是字典列表
+        # 确保 metadata 是字典列表，且每个都有 source 字段
         if request.metadata:
             metadatas = request.metadata
         else:
-            metadatas = [{}] * len(request.texts)
+            metadatas = [{"source": "manual", "timestamp": int(time.time())} for _ in request.texts]
 
         # 使用 embedder 生成向量
         embeddings = _rag_pipeline.embedder.embed_texts(request.texts)
