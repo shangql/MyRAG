@@ -49,19 +49,22 @@ class RAGPipeline:
         retriever: HybridRetriever,
         llm: LLMOrchestrator,
         embedder: Any,
+        vector_store: Any = None,
         prompt_template: Optional[str] = None,
     ):
         """初始化 RAG Pipeline
-        
+
         Args:
             retriever: 混合检索器实例
             llm: LLM 调度器实例
             embedder: 嵌入模型实例
+            vector_store: 向量存储实例（用于获取原始相似度分数）
             prompt_template: 自定义提示词模板
         """
         self.retriever = retriever
         self.llm = llm
         self.embedder = embedder
+        self.vector_store = vector_store
         
         # 默认提示词模板
         self.prompt_template = prompt_template or self._default_template()
@@ -145,10 +148,27 @@ class RAGPipeline:
 
         # Step 3 & 4: 构建 prompt
         # 如果没有检索结果，直接使用 LLM 回答（不依赖本地知识库）
-        # 注意：这里不做分数阈值过滤，因为 RRF 分数不能准确反映相关性
-        # 如果需要严格过滤相关性，可以考虑使用原始向量相似度分数
+        # 同时检查最高相似度分数，如果太低也切换到直接问答模式
+        use_direct_mode = False
+
         if not search_results:
             logger.debug("无检索结果，切换到直接问答模式")
+            use_direct_mode = True
+        else:
+            # 检查 ChromaDB 原始余弦相似度分数（不是 RRF 分数）
+            # 直接查询向量存储获取原始分数
+            try:
+                if self.vector_store is not None:
+                    raw_results = self.vector_store.search(query_vector, k=1)
+                    if raw_results:
+                        max_cosine_score = raw_results[0].get("score", 0)
+                        # ChromaDB 余弦相似度 > 0.5 表示强相关，< 0.5 切换到直接问答模式
+                        if max_cosine_score < 0.5:
+                            use_direct_mode = True
+            except Exception:
+                pass  # 如果获取原始分数失败，使用默认逻辑
+
+        if use_direct_mode:
             prompt = self._build_direct_prompt(query)
             search_results = []
         else:
@@ -403,4 +423,5 @@ def create_rag_pipeline(
         retriever=retriever,
         llm=llm,
         embedder=embedder,
+        vector_store=vector_store,
     )
