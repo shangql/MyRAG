@@ -15,7 +15,9 @@
       "Bash(pkill:*)",
       "Bash(./run.sh api:*)",
       "Bash(curl:*)",
-      "Bash(./run.sh ui:*)"
+      "Bash(./run.sh ui:*)",
+      "Bash(/bin/sleep 3:*)",
+      "Bash(/bin/sleep 10:*)"
     ]
   }
 }

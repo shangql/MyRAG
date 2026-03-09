@@ -142,18 +142,17 @@ class RAGPipeline:
             raise PipelineError(f"文档检索失败: {str(e)}")
         
         logger.debug(f"检索到 {len(search_results)} 条相关文档")
-        
-        # 检查是否有检索结果
-        if not search_results:
-            return RAGResponse(
-                answer="抱歉，我没有找到相关的参考信息来回答这个问题。",
-                sources=[],
-                model=self.llm.model,
-                query=query,
-            )
-        
+
         # Step 3 & 4: 构建 prompt
-        prompt = self._build_prompt(query, search_results)
+        # 如果没有检索结果，直接使用 LLM 回答（不依赖本地知识库）
+        # 注意：这里不做分数阈值过滤，因为 RRF 分数不能准确反映相关性
+        # 如果需要严格过滤相关性，可以考虑使用原始向量相似度分数
+        if not search_results:
+            logger.debug("无检索结果，切换到直接问答模式")
+            prompt = self._build_direct_prompt(query)
+            search_results = []
+        else:
+            prompt = self._build_prompt(query, search_results)
         
         # Step 5: 调用 LLM 生成
         if stream:
@@ -218,17 +217,44 @@ class RAGPipeline:
         query: str,
         sources: List[SearchResult],
     ) -> str:
-        """渲染 prompt 模板
-        
+        """渲染 prompt 模板（RAG 模式，有检索结果）
+
         Args:
             query: 用户查询
             sources: 检索结果
-            
+
         Returns:
             str: 渲染后的 prompt
         """
         template = Template(self.prompt_template)
         return template.render(query=query, sources=sources)
+
+    def _build_direct_prompt(self, query: str) -> str:
+        """构建直接问答提示词（无检索结果时使用）
+
+        当本地知识库没有相关文档时，直接调用 LLM 回答，
+        不依赖 RAG 检索增强。
+
+        Args:
+            query: 用户查询
+
+        Returns:
+            str: 渲染后的 prompt
+        """
+        template_str = """你是一个专业的问答助手。请直接回答用户的问题。
+
+## 用户问题
+{{ query }}
+
+## 回答要求
+1. 根据你的知识直接回答
+2. 回答要清晰、准确、简洁
+3. 如果问题不明确，可以要求用户澄清
+
+## 回答
+"""
+        template = Template(template_str)
+        return template.render(query=query)
     
     def _build_context(self, sources: List[SearchResult]) -> str:
         """构建上下文文本

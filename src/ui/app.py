@@ -68,21 +68,34 @@ def render_sidebar():
     """
     st.sidebar.title("⚙️ 系统设置")
 
-    # 从环境变量或 st.secrets 获取 API Key
-    api_key = None
-    try:
-        api_key = st.secrets.get("MODELSCOPE_API_KEY", None)
-    except:
-        pass
+    # 从环境变量获取 API Key（不硬编码在代码中）
+    import os
+    api_key = os.environ.get("MODELSCOPE_API_KEY", "")
 
-    # 如果没有配置，尝试使用默认值（需要用户输入）
+    # 如果环境变量没有，尝试从 st.secrets 获取
     if not api_key:
-        api_key = "ms-bc1d7182-3cf9-4ee1-8d25-9c342fc81025"
+        try:
+            api_key = st.secrets.get("MODELSCOPE_API_KEY", "")
+        except:
+            pass
 
-    # 获取模型列表
-    models = fetch_modelscope_models(api_key)
-    if not models:
-        models = get_default_models()
+    # 如果都没有，提示用户输入
+    if not api_key:
+        api_key = st.sidebar.text_input(
+            "请输入 ModelScope API Key",
+            type="password",
+            help="在 https://modelscope.cn 获取 API Key"
+        )
+        if not api_key:
+            st.sidebar.warning("未配置 API Key，部分功能可能不可用")
+            models = get_default_models()
+        else:
+            models = fetch_modelscope_models(api_key)
+    else:
+        # 获取模型列表
+        models = fetch_modelscope_models(api_key)
+        if not models:
+            models = get_default_models()
 
     # 按模型类型分组
     model_groups: Dict[str, List[Dict]] = {}
