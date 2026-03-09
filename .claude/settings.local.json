@@ -20,7 +20,10 @@
       "Bash(/bin/sleep 10:*)",
       "Bash(/bin/sleep 30:*)",
       "Bash(/bin/sleep 15:*)",
-      "Bash(/bin/sleep 2:*)"
+      "Bash(/bin/sleep 2:*)",
+      "Bash(/Users/sql/GitHub/MyRAG/.venv/bin/python:*)",
+      "Bash(rm:*)",
+      "Bash(/bin/sleep 20:*)"
     ]
   }
 }

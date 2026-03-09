@@ -17,9 +17,21 @@ else
     exit 1
 fi
 
+# 端口配置
+PORT="${API_PORT:-8000}"
+
+# 杀死已运行的 uvicorn 进程
+echo "Checking for existing uvicorn process on port $PORT..."
+EXISTING_PID=$(lsof -ti:$PORT 2>/dev/null || true)
+if [ -n "$EXISTING_PID" ]; then
+    echo "Killing existing process on port $PORT (PID: $EXISTING_PID)"
+    kill $EXISTING_PID 2>/dev/null || true
+    sleep 1
+fi
+
 # 设置 Python 路径为 src 目录
 export PYTHONPATH="${SCRIPT_DIR}/src:${PYTHONPATH}"
 
 echo "Starting RAG API Server..."
 cd src
-uvicorn api.main:app --host "${API_HOST:-0.0.0.0}" --port "${API_PORT:-8000}" --reload
+uvicorn api.main:app --host "${API_HOST:-0.0.0.0}" --port "$PORT" --reload

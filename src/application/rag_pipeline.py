@@ -51,6 +51,7 @@ class RAGPipeline:
         embedder: Any,
         vector_store: Any = None,
         prompt_template: Optional[str] = None,
+        db_manager: Any = None,
     ):
         """初始化 RAG Pipeline
 
@@ -60,15 +61,17 @@ class RAGPipeline:
             embedder: 嵌入模型实例
             vector_store: 向量存储实例（用于获取原始相似度分数）
             prompt_template: 自定义提示词模板
+            db_manager: 数据库管理器实例
         """
         self.retriever = retriever
         self.llm = llm
         self.embedder = embedder
         self.vector_store = vector_store
-        
+        self.db_manager = db_manager
+
         # 默认提示词模板
         self.prompt_template = prompt_template or self._default_template()
-        
+
         logger.info("RAG Pipeline 初始化完成")
     
     def _default_template(self) -> str:
@@ -389,6 +392,7 @@ def create_rag_pipeline(
     embedder: Any,
     llm_provider: Optional[str] = None,
     model: Optional[str] = None,
+    db_manager: Any = None,
 ) -> RAGPipeline:
     """创建 RAG Pipeline 的工厂函数
 
@@ -397,6 +401,7 @@ def create_rag_pipeline(
         embedder: 嵌入模型实例
         llm_provider: LLM 提供商（默认从配置读取）
         model: 模型名称（默认从配置读取）
+        db_manager: 数据库管理器实例
 
     Returns:
         RAGPipeline: RAG Pipeline 实例
@@ -424,4 +429,5 @@ def create_rag_pipeline(
         llm=llm,
         embedder=embedder,
         vector_store=vector_store,
+        db_manager=db_manager,
     )
