@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RAG 智能问答系统</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root { --primary: #2563eb; --primary-hover: #1d4ed8; --bg: #f8fafc; --card: #fff; --text: #1e293b; --text-sec: #64748b; --border: #e2e8f0; --success: #22c55e; --error: #ef4444; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: var(--bg); color: var(--text); height: 100vh; display: flex; }
+        .sidebar { width: 280px; background: var(--card); border-right: 1px solid var(--border); padding: 20px; display: flex; flex-direction: column; gap: 20px; }
+        .sidebar h1 { font-size: 18px; font-weight: 600; color: var(--primary); padding-bottom: 15px; border-bottom: 1px solid var(--border); }
+        .form-group { display: flex; flex-direction: column; gap: 8px; }
+        .form-group label { font-size: 14px; font-weight: 500; color: var(--text-sec); }
+        .form-group select, .form-group input, .form-group textarea { padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px; font-size: 14px; outline: none; }
+        .form-group select:focus, .form-group input:focus, .form-group textarea:focus { border-color: var(--primary); }
+        .form-group textarea { resize: vertical; min-height: 100px; font-family: inherit; }
+        .btn { padding: 12px 20px; background: var(--primary); color: #fff; border: none; border-radius: 8px; font-size: 14px; font-weight: 500; cursor: pointer; }
+        .btn:hover { background: var(--primary-hover); }
+        .btn-danger { background: #ef4444; }
+        .btn-danger:hover { background: #dc2626; }
+        .btn-success { background: var(--success); }
+        .btn-success:hover { background: #16a34a; }
+        .btn:disabled { opacity: 0.6; cursor: not-allowed; }
+        .btn-sm { padding: 8px 12px; font-size: 12px; }
+
+        .tabs { display: flex; gap: 4px; padding: 0 20px; background: var(--card); border-bottom: 1px solid var(--border); }
+        .tab { padding: 15px 20px; cursor: pointer; color: var(--text-sec); border-bottom: 2px solid transparent; transition: all 0.2s; }
+        .tab:hover { color: var(--text); }
+        .tab.active { color: var(--primary); border-bottom-color: var(--primary); font-weight: 500; }
+        .tab-content { display: none; flex: 1; flex-direction: column; overflow: hidden; }
+        .tab-content.active { display: flex; }
+
+        .main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+        .header { padding: 20px 30px; background: var(--card); border-bottom: 1px solid var(--border); }
+        .header h2 { font-size: 24px; }
+        .header p { color: var(--text-sec); margin-top: 5px; font-size: 14px; }
+        .chat-container { flex: 1; overflow-y: auto; padding: 20px 30px; display: flex; flex-direction: column; gap: 20px; }
+        .message { max-width: 80%; padding: 15px 20px; border-radius: 12px; line-height: 1.6; animation: fadeIn 0.3s; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; } }
+        .message.user { align-self: flex-end; background: var(--primary); color: #fff; }
+        .message.assistant { align-self: flex-start; background: #f1f5f9; }
+        .sources { margin-top: 15px; padding-top: 15px; border-top: 1px solid rgba(0,0,0,0.1); font-size: 13px; }
+        .source-item { background: #fff; padding: 10px; border-radius: 6px; margin-top: 8px; border: 1px solid var(--border); }
+        .input-area { padding: 20px 30px; background: var(--card); border-top: 1px solid var(--border); display: flex; gap: 12px; }
+        .input-area input { flex: 1; padding: 14px 20px; border: 1px solid var(--border); border-radius: 12px; font-size: 15px; outline: none; }
+        .input-area input:focus { border-color: var(--primary); }
+        .loading { display: flex; align-items: center; gap: 8px; color: var(--text-sec); }
+        .spinner { width: 20px; height: 20px; border: 2px solid var(--border); border-top-color: var(--primary); border-radius: 50%; animation: spin 0.8s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .empty-state { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; color: var(--text-sec); }
+
+        /* 导入页面样式 */
+        .import-container { flex: 1; overflow-y: auto; padding: 30px; display: flex; flex-direction: column; gap: 24px; }
+        .import-card { background: var(--card); border-radius: 12px; padding: 24px; border: 1px solid var(--border); }
+        .import-card h3 { font-size: 16px; margin-bottom: 16px; color: var(--text); }
+        .import-card .form-group { margin-bottom: 16px; }
+        .import-card .form-group:last-child { margin-bottom: 0; }
+        .row { display: flex; gap: 16px; }
+        .row .form-group { flex: 1; }
+        .stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 20px; }
+        .stat-card { background: var(--bg); padding: 20px; border-radius: 8px; text-align: center; }
+        .stat-card .num { font-size: 32px; font-weight: 600; color: var(--primary); }
+        .stat-card .label { font-size: 14px; color: var(--text-sec); margin-top: 4px; }
+        .alert { padding: 12px 16px; border-radius: 8px; font-size: 14px; margin-top: 12px; }
+        .alert-success { background: #dcfce7; color: #166534; }
+        .alert-error { background: #fee2e2; color: #991b1b; }
+        .alert-info { background: #dbeafe; color: #1e40af; }
+
+        /* 文件上传样式 */
+        .upload-area { border: 2px dashed var(--border); border-radius: 12px; padding: 40px; text-align: center; cursor: pointer; transition: all 0.2s; }
+        .upload-area:hover { border-color: var(--primary); background: #f0f7ff; }
+        .upload-area.dragover { border-color: var(--primary); background: #e0f2fe; }
+        .upload-icon { font-size: 48px; margin-bottom: 16px; }
+        .upload-text { color: var(--text-sec); font-size: 14px; }
+        .upload-text strong { color: var(--primary); }
+        .file-list { margin-top: 20px; }
+        .file-item { display: flex; align-items: center; justify-content: space-between; padding: 12px; border: 1px solid var(--border); border-radius: 8px; margin-bottom: 8px; }
+        .file-info { display: flex; align-items: center; gap: 12px; }
+        .file-icon { font-size: 24px; }
+        .file-name { font-weight: 500; }
+        .file-meta { font-size: 12px; color: var(--text-sec); }
+        .file-actions { display: flex; gap: 8px; }
+        .status-badge { padding: 4px 8px; border-radius: 4px; font-size: 12px; }
+        .status-processed { background: #dcfce7; color: #166534; }
+        .status-pending { background: #fef3c7; color: #92400e; }
+        .status-failed { background: #fee2e2; color: #991b1b; }
+
+        .format-tags { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+        .format-tag { background: var(--bg); padding: 4px 8px; border-radius: 4px; font-size: 12px; color: var(--text-sec); }
+    </style>
+</head>
+<body>
+    <aside class="sidebar">
+        <h1>⚙️ 系统设置</h1>
+        <div class="form-group">
+            <label>选择模型</label>
+            <select id="model"></select>
+        </div>
+        <div class="form-group">
+            <label>检索数量</label>
+            <input type="number" id="topK" value="5" min="1" max="10">
+        </div>
+        <button class="btn btn-danger" id="clearBtn">清空对话</button>
+    </aside>
+    <main class="main">
+        <div class="tabs">
+            <div class="tab active" data-tab="chat">💬 智能问答</div>
+            <div class="tab" data-tab="import">📥 数据导入</div>
+            <div class="tab" data-tab="files">📁 文件管理</div>
+        </div>
+
+        <!-- 聊天页面 -->
+        <div class="tab-content active" id="tab-chat">
+            <header class="header">
+                <h2>RAG 智能问答系统</h2>
+                <p>基于检索增强生成的大语言模型问答系统</p>
+            </header>
+            <div class="chat-container" id="chat"></div>
+            <div class="input-area">
+                <input type="text" id="input" placeholder="请输入您的问题...">
+                <button class="btn" id="sendBtn">发送</button>
+            </div>
+        </div>
+
+        <!-- 数据导入页面 -->
+        <div class="tab-content" id="tab-import">
+            <div class="import-container">
+                <!-- 向量库统计 -->
+                <div class="import-card">
+                    <h3>📊 向量库统计</h3>
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="num" id="totalCount">-</div>
+                            <div class="label">总文档数</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="num">1</div>
+                            <div class="label">集合数量</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="num" id="dimCount">384</div>
+                            <div class="label">向量维度</div>
+                        </div>
+                    </div>
+                    <button class="btn" id="refreshStatsBtn" onclick="loadStats()">🔄 刷新统计</button>
+                </div>
+
+                <!-- 手动添加文本 -->
+                <div class="import-card">
+                    <h3>✏️ 手动添加文本</h3>
+                    <div class="form-group">
+                        <label>文本内容（每行一条）</label>
+                        <textarea id="textInput" placeholder="请输入要添加的文本，每行一条..."></textarea>
+                    </div>
+                    <button class="btn btn-success" id="addTextBtn" onclick="addTexts()">➕ 添加文本</button>
+                    <div id="addTextResult"></div>
+                </div>
+
+                <!-- 从数据库导入 -->
+                <div class="import-card">
+                    <h3>🗄️ 从 MySQL 导入</h3>
+                    <div class="row">
+                        <div class="form-group">
+                            <label>表名</label>
+                            <input type="text" id="tableName" placeholder="例如: articles">
+                        </div>
+                        <div class="form-group">
+                            <label>内容列</label>
+                            <input type="text" id="contentColumn" value="content">
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="form-group">
+                            <label>ID 列</label>
+                            <input type="text" id="idColumn" value="id">
+                        </div>
+                        <div class="form-group">
+                            <label>批处理大小</label>
+                            <input type="number" id="batchSize" value="100" min="1" max="1000">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>过滤条件（可选）</label>
+                        <input type="text" id="filterCondition" placeholder="例如: status = 'published'">
+                    </div>
+                    <button class="btn" id="importBtn" onclick="importFromDB()">📥 开始导入</button>
+                    <div id="importResult"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 文件管理页面 -->
+        <div class="tab-content" id="tab-files">
+            <div class="import-container">
+                <!-- 文件上传 -->
+                <div class="import-card">
+                    <h3>📤 上传文件</h3>
+                    <div class="upload-area" id="uploadArea">
+                        <div class="upload-icon">📁</div>
+                        <div class="upload-text">
+                            <strong>点击或拖拽文件到此处</strong><br>
+                            支持多文件同时上传
+                        </div>
+                        <input type="file" id="fileInput" multiple style="display: none;">
+                    </div>
+                    <div class="format-tags">
+                        <span class="format-tag">文档: TXT, MD, PDF, HTML, DOCX</span>
+                        <span class="format-tag">表格: XLSX, XLS, CSV</span>
+                        <span class="format-tag">其他: EML, MSG, PPTX, XML</span>
+                        <span class="format-tag">图片: JPG, PNG, GIF (OCR)</span>
+                    </div>
+                    <div id="uploadResult"></div>
+                </div>
+
+                <!-- 文件列表 -->
+                <div class="import-card">
+                    <h3>📂 文件列表</h3>
+                    <div style="display: flex; gap: 12px; margin-bottom: 16px;">
+                        <button class="btn" onclick="loadFiles()">🔄 刷新列表</button>
+                        <button class="btn btn-success" onclick="importAllFiles()">📥 导入全部到向量库</button>
+                    </div>
+                    <div class="file-list" id="fileList">
+                        <div class="empty-state">暂无上传文件</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+    <script>
+        const API = 'http://localhost:8000/api/v1';
+        const models = [
+            { id: 'deepseek-ai/DeepSeek-R1-Distill-Qwen-7B', name: 'DeepSeek-R1' },
+            { id: 'Qwen/Qwen3-8B', name: 'Qwen3-8B' },
+            { id: 'Qwen/Qwen3-4B', name: 'Qwen3-4B' },
+        ];
+
+        // 标签页切换
+        document.querySelectorAll('.tab').forEach(tab => {
+            tab.onclick = () => {
+                document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                tab.classList.add('active');
+                document.getElementById('tab-' + tab.dataset.tab).classList.add('active');
+                if (tab.dataset.tab === 'import') loadStats();
+                if (tab.dataset.tab === 'files') loadFiles();
+            };
+        });
+
+        function esc(t) { const d = document.createElement('div'); d.textContent = t; return d.innerHTML; }
+
+        // 聊天功能
+        async function init() {
+            const sel = document.getElementById('model');
+            models.forEach(m => { sel.add(new Option(m.name, m.id)); });
+            document.getElementById('sendBtn').onclick = send;
+            document.getElementById('input').onkeypress = e => { if (e.key === 'Enter') send(); };
+            document.getElementById('clearBtn').onclick = () => location.reload();
+
+            // 文件上传
+            const uploadArea = document.getElementById('uploadArea');
+            const fileInput = document.getElementById('fileInput');
+            uploadArea.onclick = () => fileInput.click();
+            fileInput.onchange = handleFileSelect;
+
+            // 拖拽上传
+            uploadArea.ondragover = (e) => { e.preventDefault(); uploadArea.classList.add('dragover'); };
+            uploadArea.ondragleave = () => uploadArea.classList.remove('dragover');
+            uploadArea.ondrop = (e) => {
+                e.preventDefault();
+                uploadArea.classList.remove('dragover');
+                handleFiles(e.dataTransfer.files);
+            };
+        }
+
+        function handleFileSelect(e) {
+            handleFiles(e.target.files);
+        }
+
+        async function handleFiles(files) {
+            if (!files.length) return;
+
+            const btn = document.getElementById('uploadResult');
+            btn.innerHTML = '<div class="alert alert-info">上传中...</div>';
+
+            for (const file of files) {
+                const formData = new FormData();
+                formData.append('file', file);
+
+                try {
+                    const res = await fetch(API + '/files/upload', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    const data = await res.json();
+                    if (data.status === 'success') {
+                        btn.innerHTML = `<div class="alert alert-success">✓ ${file.name} 上传成功，解析出 ${data.chunks} 个片段</div>`;
+                        loadFiles();
+                    } else {
+                        btn.innerHTML = `<div class="alert alert-error">✗ ${file.name} 上传失败: ${data.detail}</div>`;
+                    }
+                } catch (e) {
+                    btn.innerHTML = `<div class="alert alert-error">✗ ${file.name} 上传失败: ${e.message}</div>`;
+                }
+            }
+        }
+
+        async function loadFiles() {
+            try {
+                const res = await fetch(API + '/files');
+                const data = await res.json();
+                const list = document.getElementById('fileList');
+
+                if (!data.files || data.files.length === 0) {
+                    list.innerHTML = '<div class="empty-state">暂无上传文件</div>';
+                    return;
+                }
+
+                list.innerHTML = data.files.map(f => `
+                    <div class="file-item">
+                        <div class="file-info">
+                            <span class="file-icon">${getFileIcon(f.file_type)}</span>
+                            <div>
+                                <div class="file-name">${esc(f.original_name)}</div>
+                                <div class="file-meta">${formatSize(f.file_size)} | ${f.text_length} 字符 | ${f.created_at}</div>
+                            </div>
+                        </div>
+                        <div class="file-actions">
+                            <span class="status-badge status-${f.status}">${f.status}</span>
+                            <button class="btn btn-sm" onclick="importFile(${f.id})">导入</button>
+                            <button class="btn btn-sm btn-danger" onclick="deleteFile(${f.id})">删除</button>
+                        </div>
+                    </div>
+                `).join('');
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        function getFileIcon(type) {
+            const icons = {
+                '.pdf': '📄', '.docx': '📝', '.txt': '📃', '.md': '📋',
+                '.xlsx': '📊', '.xls': '📊', '.csv': '📊',
+                '.html': '🌐', '.htm': '🌐',
+                '.jpg': '🖼️', '.jpeg': '🖼️', '.png': '🖼️', '.gif': '🖼️',
+            };
+            return icons[type] || '📁';
+        }
+
+        function formatSize(bytes) {
+            if (bytes < 1024) return bytes + ' B';
+            if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+            return (bytes / 1024 / 1024).toFixed(1) + ' MB';
+        }
+
+        async function importFile(fileId) {
+            try {
+                const res = await fetch(API + '/files/' + fileId + '/import', { method: 'POST' });
+                const data = await res.json();
+                if (data.status === 'success') {
+                    alert('导入成功！共导入 ' + data.imported + ' 个片段');
+                    loadStats();
+                } else {
+                    alert('导入失败: ' + (data.detail || '未知错误'));
+                }
+            } catch (e) {
+                alert('导入失败: ' + e.message);
+            }
+        }
+
+        async function importAllFiles() {
+            if (!confirm('确定要导入所有文件到向量库吗？')) return;
+
+            try {
+                const res = await fetch(API + '/files/import-all', { method: 'POST' });
+                const data = await res.json();
+                if (data.status === 'success') {
+                    alert('批量导入完成！共导入 ' + data.total_imported + ' 个片段');
+                    loadStats();
+                } else {
+                    alert('导入失败: ' + (data.detail || '未知错误'));
+                }
+            } catch (e) {
+                alert('导入失败: ' + e.message);
+            }
+        }
+
+        async function deleteFile(fileId) {
+            if (!confirm('确定要删除此文件吗？')) return;
+
+            try {
+                const res = await fetch(API + '/files/' + fileId, { method: 'DELETE' });
+                const data = await res.json();
+                if (data.status === 'success') {
+                    loadFiles();
+                } else {
+                    alert('删除失败: ' + (data.detail || '未知错误'));
+                }
+            } catch (e) {
+                alert('删除失败: ' + e.message);
+            }
+        }
+
+        // 聊天功能
+        async function send() {
+            const q = document.getElementById('input').value.trim();
+            if (!q) return;
+            addMsg('user', esc(q));
+            document.getElementById('input').value = '';
+            const loading = addMsg('assistant', '<div class="loading"><div class="spinner"></div>思考中...</div>', true);
+            try {
+                const res = await fetch(API + '/chat', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ query: q, model: document.getElementById('model').value, provider: 'modelscope', top_k: parseInt(document.getElementById('topK').value) })
+                });
+                const data = await res.json();
+                loading.remove();
+                addMsg('assistant', esc(data.answer), false, data.sources);
+            } catch (e) { loading.remove(); addMsg('assistant', '错误: ' + esc(e.message)); }
+        }
+
+        function addMsg(role, html, isLoading, sources) {
+            const c = document.getElementById('chat');
+            const d = document.createElement('div');
+            d.className = 'message ' + role;
+            d.innerHTML = html;
+            if (!isLoading && sources && sources.length) {
+                let s = '<div class="sources"><strong>参考来源:</strong>';
+                sources.forEach(x => s += `<div class="source-item">${esc(x.content.substring(0,150))}...<br><small>相似度: ${(x.score*100).toFixed(1)}%</small></div>`);
+                d.innerHTML += s + '</div>';
+            }
+            c.appendChild(d);
+            c.scrollTop = c.scrollHeight;
+            return d;
+        }
+
+        // 导入功能
+        async function loadStats() {
+            try {
+                const res = await fetch(API + '/vectors/stats');
+                const data = await res.json();
+                document.getElementById('totalCount').textContent = data.total_count;
+            } catch (e) {
+                document.getElementById('totalCount').textContent = 'Error';
+            }
+        }
+
+        async function addTexts() {
+            const textInput = document.getElementById('textInput');
+            const texts = textInput.value.split('\n').map(t => t.trim()).filter(t => t);
+            if (!texts.length) {
+                showAlert('addTextResult', '请输入要添加的文本', 'error');
+                return;
+            }
+
+            const btn = document.getElementById('addTextBtn');
+            btn.disabled = true;
+            btn.textContent = '添加中...';
+
+            try {
+                const res = await fetch(API + '/vectors/add', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ texts: texts })
+                });
+                const data = await res.json();
+                if (data.status === 'success') {
+                    showAlert('addTextResult', `成功添加 ${data.count} 条记录`, 'success');
+                    textInput.value = '';
+                    loadStats();
+                } else {
+                    showAlert('addTextResult', '添加失败: ' + (data.detail || '未知错误'), 'error');
+                }
+            } catch (e) {
+                showAlert('addTextResult', '错误: ' + e.message, 'error');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '➕ 添加文本';
+            }
+        }
+
+        async function importFromDB() {
+            const tableName = document.getElementById('tableName').value.trim();
+            if (!tableName) {
+                showAlert('importResult', '请输入表名', 'error');
+                return;
+            }
+
+            const btn = document.getElementById('importBtn');
+            btn.disabled = true;
+            btn.textContent = '导入中...';
+
+            try {
+                const res = await fetch(API + '/vectors/import', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        table_name: tableName,
+                        content_column: document.getElementById('contentColumn').value || 'content',
+                        id_column: document.getElementById('idColumn').value || 'id',
+                        batch_size: parseInt(document.getElementById('batchSize').value) || 100,
+                        filter_condition: document.getElementById('filterCondition').value || null
+                    })
+                });
+                const data = await res.json();
+                if (data.status === 'success') {
+                    showAlert('importResult', `导入完成！成功: ${data.imported}, 失败: ${data.failed}`, 'success');
+                    loadStats();
+                } else {
+                    showAlert('importResult', '导入失败: ' + (data.detail || '未知错误'), 'error');
+                }
+            } catch (e) {
+                showAlert('importResult', '错误: ' + e.message, 'error');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '📥 开始导入';
+            }
+        }
+
+        function showAlert(id, msg, type) {
+            const el = document.getElementById(id);
+            el.innerHTML = `<div class="alert alert-${type}">${esc(msg)}</div>`;
+        }
+
+        init();
+    </script>
+</body>
+</html>

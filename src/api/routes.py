@@ -9,6 +9,16 @@ from typing import Optional, List
 from datetime import datetime
 from contextlib import contextmanager
 
+
+def _get_file_record():
+    """获取 FileRecord 模型，避免触发 data/__init__.py 导入 embedder"""
+    file_model_path = Path(__file__).parent.parent / "data" / "file_model.py"
+    spec = importlib.util.spec_from_file_location("file_model", file_model_path)
+    file_model = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(file_model)
+    return file_model.FileRecord
+
+
 from fastapi import APIRouter, HTTPException, UploadFile, File, Form
 from fastapi.responses import StreamingResponse
 
@@ -354,7 +364,7 @@ async def upload_file(file: UploadFile = File(...)):
 async def list_files(limit: int = 50, offset: int = 0):
     """获取文件列表"""
     try:
-        from data.file_model import FileRecord
+        FileRecord = _get_file_record()
         from sqlalchemy import func
 
         db = get_db_manager()
@@ -397,7 +407,7 @@ async def delete_file(file_id: int):
         raise HTTPException(status_code=500, detail="RAG Pipeline 未初始化")
 
     try:
-        from data.file_model import FileRecord
+        FileRecord = _get_file_record()
 
         with _rag_pipeline.db_manager.get_session() as session:
             record = session.query(FileRecord).filter(FileRecord.id == file_id).first()
@@ -426,7 +436,7 @@ async def import_file_to_vector(file_id: int):
         raise HTTPException(status_code=500, detail="RAG Pipeline 未初始化")
 
     try:
-        from data.file_model import FileRecord
+        FileRecord = _get_file_record()
 
         # 先查询获取内容（在 session 内）
         with _rag_pipeline.db_manager.get_session() as session:
@@ -491,7 +501,7 @@ async def import_all_files():
         raise HTTPException(status_code=500, detail="RAG Pipeline 未初始化")
 
     try:
-        from data.file_model import FileRecord
+        FileRecord = _get_file_record()
 
         total_imported = 0
         with _rag_pipeline.db_manager.get_session() as session:
