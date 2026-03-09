@@ -1,5 +1,55 @@
 """Streamlit 前端应用 - Web 聊天界面"""
 import streamlit as st
+from typing import List, Dict, Optional
+
+
+@st.cache_data(ttl=3600)
+def fetch_modelscope_models(api_key: str) -> List[Dict[str, str]]:
+    """从 ModelScope API 获取可用模型列表
+
+    Args:
+        api_key: ModelScope API 密钥
+
+    Returns:
+        模型列表，每个元素包含 id 和显示名称
+    """
+    import requests
+
+    try:
+        response = requests.get(
+            "https://api-inference.modelscope.cn/v1/models",
+            headers={"Authorization": f"Bearer {api_key}"},
+            timeout=10,
+        )
+        if response.status_code == 200:
+            data = response.json()
+            models = []
+            for item in data.get("data", []):
+                model_id = item.get("id", "")
+                # 提取模型简称用于显示
+                display_name = model_id.split("/")[-1] if "/" in model_id else model_id
+                models.append({
+                    "id": model_id,
+                    "display": display_name,
+                })
+            return models
+        else:
+            st.error(f"获取模型列表失败: {response.status_code}")
+            return []
+    except Exception as e:
+        st.error(f"连接 ModelScope API 失败: {e}")
+        return []
+
+
+def get_default_models() -> List[Dict[str, str]]:
+    """获取默认模型列表（API 失败时的备用）"""
+    return [
+        {"id": "deepseek-ai/DeepSeek-R1-Distill-Qwen-7B", "display": "DeepSeek-R1-Distill-Qwen-7B"},
+        {"id": "Qwen/Qwen3-8B", "display": "Qwen3-8B"},
+        {"id": "Qwen/Qwen3-4B", "display": "Qwen3-4B"},
+        {"id": "Qwen/Qwen2.5-7B-Instruct", "display": "Qwen2.5-7B-Instruct"},
+        {"id": "Qwen/Qwen2.5-4B-Instruct", "display": "Qwen2.5-4B-Instruct"},
+    ]
 
 
 def init_session_state():
@@ -7,38 +57,87 @@ def init_session_state():
     if "messages" not in st.session_state:
         st.session_state.messages = []
     if "model" not in st.session_state:
-        st.session_state.model = "openai"
+        st.session_state.model = "deepseek-ai/DeepSeek-R1-Distill-Qwen-7B"
 
 
 def render_sidebar():
     """渲染侧边栏
-    
+
     Returns:
-        tuple: (model_provider, model_name, top_k)
+        tuple: (model_name, top_k)
     """
     st.sidebar.title("⚙️ 系统设置")
-    
-    # 模型选择 - 只支持 ModelScope
-    model_provider = "modelscope"
 
-    model_options = [
-        "deepseek-ai/DeepSeek-R1-Distill-Qwen-7B",
-        "Qwen/Qwen3-8B",
-        "Qwen/Qwen3-4B",
-        "Qwen/Qwen2.5-7B-Instruct",
-        "Qwen/Qwen2.5-4B-Instruct",
-    ]
+    # 从环境变量或 st.secrets 获取 API Key
+    api_key = None
+    try:
+        api_key = st.secrets.get("MODELSCOPE_API_KEY", None)
+    except:
+        pass
 
-    model_name = st.sidebar.selectbox("模型", model_options, index=0)
-    
+    # 如果没有配置，尝试使用默认值（需要用户输入）
+    if not api_key:
+        api_key = "ms-bc1d7182-3cf9-4ee1-8d25-9c342fc81025"
+
+    # 获取模型列表
+    models = fetch_modelscope_models(api_key)
+    if not models:
+        models = get_default_models()
+
+    # 按模型类型分组
+    model_groups: Dict[str, List[Dict]] = {}
+    for model in models:
+        model_id = model["id"]
+        if "/" in model_id:
+            group = model_id.split("/")[0]
+        else:
+            group = "other"
+        if group not in model_groups:
+            model_groups[group] = []
+        model_groups[group].append(model)
+
+    # 创建扁平化的选项列表（保留原始 id）
+    all_model_ids = [m["id"] for m in models]
+
+    # 格式化显示函数
+    def format_model(model_id: str) -> str:
+        """格式化模型显示名称"""
+        if "/" in model_id:
+            owner, name = model_id.split("/", 1)
+            return f"{name} ({owner})"
+        return model_id
+
+    # 默认选中的模型
+    default_index = 0
+    if st.session_state.model in all_model_ids:
+        default_index = all_model_ids.index(st.session_state.model)
+
+    # 显示刷新按钮
+    col1, col2 = st.sidebar.columns([3, 1])
+    with col1:
+        model_name = st.selectbox(
+            "选择模型",
+            options=all_model_ids,
+            index=default_index,
+            format_func=format_model,
+            key="model_selector",
+        )
+    with col2:
+        if st.button("🔄", help="刷新模型列表"):
+            st.cache_data.clear()
+            st.rerun()
+
+    # 保存选中的模型
+    st.session_state.model = model_name
+
     # 检索参数
     top_k = st.sidebar.slider("检索数量", 1, 10, 5)
-    
+
     # 清空对话
     if st.sidebar.button("🗑️ 清空对话历史"):
         st.session_state.messages = []
         st.rerun()
-    
+
     return model_name, top_k
 
 
