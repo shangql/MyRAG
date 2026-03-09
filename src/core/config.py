@@ -40,6 +40,7 @@ class Settings(BaseSettings):
     embedding_model: str = "sentence-transformers/all-MiniLM-L6-v2"
     embedding_device: Literal["cpu", "cuda"] = "cpu"
     embedding_batch_size: int = 32
+    embedding_max_length: int = 384
 
     # LLM 配置
     llm_provider: Literal["openai", "anthropic", "ollama", "modelscope"] = "openai"

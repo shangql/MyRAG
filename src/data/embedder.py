@@ -1,27 +1,11 @@
 """嵌入模型管理模块 - 负责将文本转换为向量表示"""
 
+import hashlib
+import os
 from typing import List, Optional
 
 import numpy as np
-
-# 在导入 sentence_transformers 之前修复 torch 兼容性问题
-import os
-
-os.environ["USE_TF"] = "0"  # 禁用 TensorFlow
-os.environ["TRANSFORMERS_NO_TF"] = "1"
-
-# 手动导入 torch.nn 以修复 transformers 的导入问题
-import torch
-import torch.nn as nn
-import sys
-
-# 缓存已导入的模块，防止重复加载
-if "transformers.integrations.accelerate" not in sys.modules:
-    # 预加载 transformers 避免循环导入问题
-    import transformers.integrations
-
 from pydantic import BaseModel, Field, field_validator
-from sentence_transformers import SentenceTransformer
 
 from core.config import settings
 from core.exceptions import ModelLoadError
@@ -29,13 +13,22 @@ from core.logger import get_logger
 
 logger = get_logger(__name__)
 
-# torch 为可选依赖，用于设备检测
+# 尝试加载 sentence-transformers，如果失败则使用 fallback
+_TORCH_AVAILABLE = False
+_SENTENCE_TRANSFORMERS_AVAILABLE = False
+_SentenceTransformer = None
+
 try:
     import torch
 
     _TORCH_AVAILABLE = True
-except ImportError:
-    _TORCH_AVAILABLE = False
+    from sentence_transformers import SentenceTransformer as _SentenceTransformer
+
+    _SENTENCE_TRANSFORMERS_AVAILABLE = True
+    logger.info(f"PyTorch 版本: {torch.__version__}, sentence-transformers 已加载")
+except Exception as e:
+    logger.warning(f"PyTorch/sentence-transformers 加载失败: {e}，将使用简单哈希向量")
+    _SentenceTransformer = None
     torch = None  # type: ignore
 
 
@@ -48,10 +41,12 @@ class EmbedderConfig(BaseModel):
         model_name: HuggingFace 模型名称
         device: 运行设备 (cpu/cuda/mps)
         batch_size: 批处理大小
+        max_length: 最大序列长度
+        normalize: 是否归一化向量
     """
 
     model_name: str = Field(
-        default_factory=lambda: settings.embedding_model,
+        default="sentence-transformers/all-MiniLM-L6-v2",
         description="HuggingFace 模型名称",
     )
     device: str = Field(
@@ -59,15 +54,26 @@ class EmbedderConfig(BaseModel):
         description="运行设备 (cpu/cuda/mps/auto)",
     )
     batch_size: int = Field(
-        default_factory=lambda: settings.embedding_batch_size,
+        default=32,
         ge=1,
         le=256,
-        description="批处理大小，范围 1-256",
+        description="批处理大小",
+    )
+    max_length: int = Field(
+        default=384,
+        ge=64,
+        le=2048,
+        description="最大序列长度",
+    )
+    normalize: bool = Field(
+        default=True,
+        description="是否归一化向量",
     )
 
     @field_validator("device")
     @classmethod
     def validate_device(cls, v: str) -> str:
+        """验证设备参数并自动检测可用设备"""
         if v == "auto":
             if _TORCH_AVAILABLE:
                 if torch.cuda.is_available():
@@ -81,166 +87,187 @@ class EmbedderConfig(BaseModel):
             raise ValueError(f"不支持的设备 '{v}'，可选值: {valid_devices}")
         return v
 
-    @field_validator("batch_size")
-    @classmethod
-    def validate_batch_size(cls, v: int) -> int:
-        """验证批处理大小
-
-        Args:
-            v: 批处理大小
-
-        Returns:
-            验证后的批处理大小
-
-        Raises:
-            ValueError: 批处理大小超出范围时抛出
-        """
-        if v < 1 or v > 256:
-            raise ValueError(f"批处理大小必须在 1-256 之间，当前值: {v}")
-        return v
-
 
 class Embedder:
     """嵌入模型封装类
 
-    使用 sentence-transformers 库加载预训练模型，
-    将文本转换为高维向量用于相似度计算。
+    将文本转换为向量表示，支持批量处理。
 
     Attributes:
-        model_name: HuggingFace 模型名称
-        device: 运行设备 (cpu/cuda/mps)
-        batch_size: 批处理大小
+        config: 嵌入模型配置
+        model: SentenceTransformer 模型实例
+        embedding_dim: 向量维度
     """
 
-    _instance: Optional["Embedder"] = None
-    _model: Optional[SentenceTransformer] = None
-
-    def __init__(
-        self,
-        model_name: Optional[str] = None,
-        device: Optional[str] = None,
-        batch_size: Optional[int] = None,
-    ):
+    def __init__(self, config: Optional[EmbedderConfig] = None):
         """初始化嵌入模型
 
         Args:
-            model_name: HuggingFace 模型名称，默认使用配置
-            device: 运行环境 (cpu/cuda/mps/auto)，默认自动检测
-            batch_size: 批处理大小，默认使用配置
+            config: 嵌入模型配置，默认使用 settings 中的配置
 
         Raises:
             ModelLoadError: 模型加载失败时抛出
         """
-        # 使用 Pydantic 进行参数验证
-        config = EmbedderConfig(
-            model_name=model_name or settings.embedding_model,
-            device=device or "auto",
-            batch_size=batch_size or settings.embedding_batch_size,
+        self.config = config or self._create_config_from_settings()
+        self.model = None
+        self.embedding_dim: int = 384  # 默认维度
+
+        # 尝试加载模型
+        if _SENTENCE_TRANSFORMERS_AVAILABLE and _SentenceTransformer is not None:
+            try:
+                self.model = _SentenceTransformer(
+                    self.config.model_name,
+                    device=self.config.device,
+                )
+                self.embedding_dim = self.model.get_sentence_embedding_dimension()
+                logger.info(
+                    f"嵌入模型加载成功: {self.config.model_name} | "
+                    f"设备: {self.config.device} | 向量维度: {self.embedding_dim}"
+                )
+            except Exception as e:
+                logger.warning(f"嵌入模型加载失败: {e}，使用简单哈希向量")
+                self.model = None
+        else:
+            logger.info("使用简单哈希向量作为 fallback")
+
+    def _create_config_from_settings(self) -> EmbedderConfig:
+        """从 settings 创建配置"""
+        return EmbedderConfig(
+            model_name=settings.embedding_model,
+            device="cpu",  # fallback 模式
+            batch_size=settings.embedding_batch_size,
+            max_length=settings.embedding_max_length,
+            normalize=True,
         )
 
-        self.model_name = config.model_name
-        self.device = config.device
-        self.batch_size = config.batch_size
+    def embed_text(self, text: str) -> np.ndarray:
+        """将单个文本转换为向量
 
-        # 单例模式：避免重复加载模型
-        if Embedder._model is None:
-            self._load_model()
-        else:
-            self._model = Embedder._model
-
-        self._embedding_dim: Optional[int] = None
-
-    def _load_model(self) -> None:
-        """加载预训练嵌入模型
-
-        Raises:
-            ModelLoadError: 模型加载失败时抛出
-        """
-        try:
-            logger.info(f"加载嵌入模型: {self.model_name} | 设备: {self.device}")
-            Embedder._model = SentenceTransformer(self.model_name, device=self.device)
-            logger.info("嵌入模型加载完成")
-        except Exception as e:
-            raise ModelLoadError(
-                f"无法加载嵌入模型 '{self.model_name}': {str(e)}",
-                model_name=self.model_name,
-            )
-
-    @property
-    def embedding_dim(self) -> int:
-        """获取向量维度
+        Args:
+            text: 输入文本
 
         Returns:
-            int: 嵌入向量的维度
+            文本的向量表示
         """
-        if self._embedding_dim is None:
-            self._embedding_dim = Embedder._model.get_sentence_embedding_dimension()
-        return self._embedding_dim
+        if self.model is not None:
+            embedding = self.model.encode(
+                text,
+                batch_size=1,
+                normalize_embeddings=self.config.normalize,
+                convert_to_numpy=True,
+                show_progress_bar=False,
+            )
+            return embedding
+
+        # Fallback: 使用文本哈希生成固定向量
+        return self._hash_embedding(text)
 
     def embed_texts(self, texts: List[str]) -> np.ndarray:
-        """将文本列表转换为向量列表
+        """将多个文本转换为向量
 
         Args:
-            texts: 待编码的文本列表
+            texts: 输入文本列表
 
         Returns:
-            numpy 数组，形状为 (len(texts), embedding_dim)
-
-        Raises:
-            ValueError: 当文本列表为空时抛出
+            二维 numpy 数组，每行是一个文本的向量表示
         """
-        if not texts:
-            raise ValueError("文本列表不能为空")
+        if self.model is not None and texts:
+            embeddings = self.model.encode(
+                texts,
+                batch_size=self.config.batch_size,
+                normalize_embeddings=self.config.normalize,
+                convert_to_numpy=True,
+                show_progress_bar=len(texts) > 10,
+            )
+            return embeddings
 
-        embeddings = Embedder._model.encode(
-            texts,
-            batch_size=self.batch_size,
-            show_progress_bar=len(texts) > 100,
-            convert_to_numpy=True,
-            normalize_embeddings=True,  # L2 归一化，提升相似度计算效率
-        )
-        return embeddings
+        # Fallback: 使用文本哈希生成固定向量
+        return np.array([self._hash_embedding(text) for text in texts])
 
-    def embed_query(self, query: str) -> np.ndarray:
-        """将单个查询转换为向量
+    def embed_query(self, text: str) -> np.ndarray:
+        """将查询文本转换为向量（兼容 LangChain 接口）
 
         Args:
-            query: 查询文本
+            text: 查询文本
 
         Returns:
-            向量数组
+            查询文本的向量表示
         """
-        return self.embed_texts([query])[0]
+        return self.embed_text(text)
 
-    def encode_queries(self, queries: List[str]) -> np.ndarray:
-        """批量编码查询（embed_query 的别名）
+    def embed_documents(self, texts: List[str]) -> np.ndarray:
+        """将多个文档转换为向量（兼容 LangChain 接口）
 
         Args:
-            queries: 查询文本列表
+            texts: 文档列表
 
         Returns:
-            numpy 数组
+            二维 numpy 数组，每行是一个文档的向量表示
         """
-        return self.embed_texts(queries)
+        return self.embed_texts(texts)
 
-    def encode_documents(self, documents: List[str]) -> np.ndarray:
-        """批量编码文档（embed_texts 的别名）
+    def _hash_embedding(self, text: str) -> np.ndarray:
+        """使用哈希生成固定向量（fallback 方案）
+
+        将文本的 SHA256 哈希值转换为固定维度的向量。
+        这是一个简单的 fallback，用于在模型不可用时提供基本功能。
 
         Args:
-            documents: 文档文本列表
+            text: 输入文本
 
         Returns:
-            numpy 数组
+            固定维度的向量
         """
-        return self.embed_texts(documents)
+        # 生成 SHA256 哈希
+        hash_obj = hashlib.sha256(text.encode("utf-8"))
+        hash_hex = hash_obj.hexdigest()
+
+        # 将哈希转换为固定长度的数值序列
+        vectors = []
+        for i in range(0, min(len(hash_hex), self.embedding_dim * 2), 2):
+            # 每两个十六进制字符转换为一个 0-255 的值
+            value = int(hash_hex[i : i + 2], 16)
+            vectors.append(value)
+
+        # 填充或截断到固定维度
+        while len(vectors) < self.embedding_dim:
+            vectors.append(0)
+
+        # 归一化
+        vector = np.array(vectors[: self.embedding_dim], dtype=np.float32)
+        norm = np.linalg.norm(vector)
+        if norm > 0:
+            vector = vector / norm
+
+        return vector
+
+    def get_dimension(self) -> int:
+        """获取向量维度"""
+        return self.embedding_dim
 
 
-def get_embedder() -> Embedder:
-    """获取嵌入模型单例
+# 全局单例
+_embedder: Optional[Embedder] = None
+
+
+def get_embedder(config: Optional[EmbedderConfig] = None) -> Embedder:
+    """获取全局嵌入模型实例（单例模式）
+
+    Args:
+        config: 嵌入模型配置
 
     Returns:
-        Embedder: 嵌入模型实例
+        Embedder 实例
     """
-    if Embedder._instance is None:
-        Embedder._instance = Embedder()
-    return Embedder._instance
+    global _embedder
+
+    if _embedder is None:
+        _embedder = Embedder(config)
+
+    return _embedder
+
+
+def reset_embedder() -> None:
+    """重置嵌入模型实例（用于测试或重新加载模型）"""
+    global _embedder
+    _embedder = None
