@@ -37,3 +37,41 @@ class HealthResponse(BaseModel):
     """健康检查响应"""
     status: str
     version: str
+
+
+class ImportRequest(BaseModel):
+    """数据导入请求"""
+    table_name: str = Field(..., description="数据库表名")
+    content_column: str = Field("content", description="内容列名")
+    id_column: str = Field("id", description="ID列名")
+    metadata_columns: Optional[List[str]] = Field(None, description="元数据列名")
+    batch_size: int = Field(100, description="批处理大小")
+    filter_condition: Optional[str] = Field(None, description="SQL WHERE条件")
+
+
+class ImportResponse(BaseModel):
+    """数据导入响应"""
+    status: str
+    imported: int
+    failed: int
+    total: int
+    message: str
+
+
+class TextAddRequest(BaseModel):
+    """添加文本请求"""
+    texts: List[str] = Field(..., description="文本列表")
+    metadata: Optional[List[Dict[str, Any]]] = Field(None, description="元数据列表")
+
+
+class TextAddResponse(BaseModel):
+    """添加文本响应"""
+    status: str
+    count: int
+    ids: List[str]
+
+
+class VectorStatsResponse(BaseModel):
+    """向量库统计"""
+    total_count: int
+    collections: List[Dict[str, Any]]

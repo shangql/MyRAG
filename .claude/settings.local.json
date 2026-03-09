@@ -19,7 +19,8 @@
       "Bash(/bin/sleep 3:*)",
       "Bash(/bin/sleep 10:*)",
       "Bash(/bin/sleep 30:*)",
-      "Bash(/bin/sleep 15:*)"
+      "Bash(/bin/sleep 15:*)",
+      "Bash(/bin/sleep 2:*)"
     ]
   }
 }
