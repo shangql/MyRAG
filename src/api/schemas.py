@@ -10,6 +10,7 @@ class ChatRequest(BaseModel):
     top_k: int = Field(5, description="检索结果数量")
     stream: bool = Field(False, description="是否流式输出")
     model: Optional[str] = Field(None, description="指定模型名称")
+    provider: Optional[str] = Field(None, description="LLM 提供商 (openai/anthropic/ollama/modelscope)")
 
 
 class ChatResponse(BaseModel):

@@ -10,3 +10,66 @@
 2026-03-06 16:44:06 | INFO     | application.rag_pipeline:__init__:69 - RAG Pipeline 初始化完成
 2026-03-06 16:44:06 | INFO     | api.main:lifespan:34 - RAG Pipeline 初始化完成
 2026-03-06 16:44:06 | INFO     | api.main:lifespan:41 - RAG API 服务关闭
+2026-03-09 09:35:57 | INFO     | core.logger:setup_logging:71 - 日志系统初始化完成 | 级别: INFO
+2026-03-09 09:35:57 | INFO     | core.logger:setup_logging:73 - 日志文件: ./logs/app.log
+2026-03-09 09:35:57 | INFO     | api.main:lifespan:20 - RAG API 服务启动
+2026-03-09 09:35:58 | INFO     | data.database:_initialize:49 - 初始化数据库连接 | 类型: mysql | URL: 192.168.102.45:3306
+2026-03-09 09:35:58 | INFO     | data.database:_initialize:68 - 数据库连接池初始化完成
+2026-03-09 09:36:00 | INFO     | data.embedder:_load_model:145 - 加载嵌入模型: sentence-transformers/all-MiniLM-L6-v2 | 设备: mps
+2026-03-09 09:36:03 | INFO     | data.embedder:_load_model:147 - 嵌入模型加载完成
+2026-03-09 09:36:04 | INFO     | data.vector_store:_initialize_client:182 - ChromaDB 集合初始化完成: default
+2026-03-09 09:36:04 | INFO     | llm.orchestrator:__init__:781 - LLM 调度器初始化完成 | 提供商: modelscope | 模型: deepseek-ai/DeepSeek-R1-Distill-Qwen-7B
+2026-03-09 09:36:04 | INFO     | application.rag_pipeline:__init__:69 - RAG Pipeline 初始化完成
+2026-03-09 09:36:04 | INFO     | api.main:lifespan:34 - RAG Pipeline 初始化完成
+2026-03-09 09:36:27 | INFO     | llm.orchestrator:switch_model:844 - 模型切换完成 | 提供商: modelscope | 模型: deepseek-ai/DeepSeek-R1-Distill-Qwen-7B
+2026-03-09 09:36:27 | INFO     | application.rag_pipeline:chat:125 - 处理查询: 你好...
+2026-03-09 09:36:48 | INFO     | llm.orchestrator:switch_model:844 - 模型切换完成 | 提供商: modelscope | 模型: deepseek-ai/DeepSeek-R1-Distill-Qwen-7B
+2026-03-09 09:36:48 | INFO     | application.rag_pipeline:chat:125 - 处理查询: 你好...
+2026-03-09 09:36:56 | INFO     | application.rag_pipeline:chat:125 - 处理查询: 什么是RAG系统...
+2026-03-09 09:37:01 | INFO     | llm.orchestrator:switch_model:844 - 模型切换完成 | 提供商: modelscope | 模型: deepseek-ai/DeepSeek-R1-Distill-Qwen-7B
+2026-03-09 09:37:01 | INFO     | application.rag_pipeline:chat:125 - 处理查询: 你好...
+2026-03-09 09:38:41 | INFO     | application.rag_pipeline:chat:125 - 处理查询: 什么是RAG？...
+2026-03-09 09:42:09 | INFO     | application.rag_pipeline:chat:125 - 处理查询: RAG是什么...
+2026-03-09 09:43:01 | INFO     | api.main:lifespan:41 - RAG API 服务关闭
+2026-03-09 09:43:03 | INFO     | core.logger:setup_logging:71 - 日志系统初始化完成 | 级别: INFO
+2026-03-09 09:43:03 | INFO     | core.logger:setup_logging:73 - 日志文件: ./logs/app.log
+2026-03-09 09:43:03 | INFO     | api.main:lifespan:20 - RAG API 服务启动
+2026-03-09 09:43:04 | INFO     | data.database:_initialize:49 - 初始化数据库连接 | 类型: mysql | URL: 192.168.102.45:3306
+2026-03-09 09:43:04 | INFO     | data.database:_initialize:68 - 数据库连接池初始化完成
+2026-03-09 09:43:06 | INFO     | data.embedder:_load_model:145 - 加载嵌入模型: sentence-transformers/all-MiniLM-L6-v2 | 设备: mps
+2026-03-09 09:43:10 | INFO     | data.embedder:_load_model:147 - 嵌入模型加载完成
+2026-03-09 09:43:10 | INFO     | data.vector_store:_initialize_client:182 - ChromaDB 集合初始化完成: default
+2026-03-09 09:43:10 | INFO     | llm.orchestrator:__init__:781 - LLM 调度器初始化完成 | 提供商: modelscope | 模型: deepseek-ai/DeepSeek-R1-Distill-Qwen-7B
+2026-03-09 09:43:10 | INFO     | application.rag_pipeline:__init__:69 - RAG Pipeline 初始化完成
+2026-03-09 09:43:10 | INFO     | api.main:lifespan:34 - RAG Pipeline 初始化完成
+2026-03-09 09:43:14 | INFO     | application.rag_pipeline:chat:125 - 处理查询: RAG是什么...
+2026-03-09 09:46:08 | INFO     | api.main:lifespan:41 - RAG API 服务关闭
+2026-03-09 09:46:17 | INFO     | core.logger:setup_logging:71 - 日志系统初始化完成 | 级别: INFO
+2026-03-09 09:46:17 | INFO     | core.logger:setup_logging:73 - 日志文件: ./logs/app.log
+2026-03-09 09:46:17 | INFO     | api.main:lifespan:20 - RAG API 服务启动
+2026-03-09 09:46:18 | INFO     | data.database:_initialize:49 - 初始化数据库连接 | 类型: mysql | URL: 192.168.102.45:3306
+2026-03-09 09:46:18 | INFO     | data.database:_initialize:68 - 数据库连接池初始化完成
+2026-03-09 09:46:20 | INFO     | data.embedder:_load_model:145 - 加载嵌入模型: sentence-transformers/all-MiniLM-L6-v2 | 设备: mps
+2026-03-09 09:46:24 | INFO     | data.embedder:_load_model:147 - 嵌入模型加载完成
+2026-03-09 09:46:24 | INFO     | data.vector_store:_initialize_client:182 - ChromaDB 集合初始化完成: default
+2026-03-09 09:46:24 | INFO     | llm.orchestrator:__init__:781 - LLM 调度器初始化完成 | 提供商: modelscope | 模型: deepseek-ai/DeepSeek-R1-Distill-Qwen-7B
+2026-03-09 09:46:24 | INFO     | application.rag_pipeline:__init__:69 - RAG Pipeline 初始化完成
+2026-03-09 09:46:24 | INFO     | api.main:lifespan:34 - RAG Pipeline 初始化完成
+2026-03-09 09:50:33 | INFO     | application.rag_pipeline:chat:125 - 处理查询: RAG是什么...
+2026-03-09 09:51:35 | INFO     | api.main:lifespan:41 - RAG API 服务关闭
+2026-03-09 09:51:37 | INFO     | core.logger:setup_logging:71 - 日志系统初始化完成 | 级别: INFO
+2026-03-09 09:51:37 | INFO     | core.logger:setup_logging:73 - 日志文件: ./logs/app.log
+2026-03-09 09:51:37 | INFO     | api.main:lifespan:20 - RAG API 服务启动
+2026-03-09 09:51:38 | INFO     | data.database:_initialize:49 - 初始化数据库连接 | 类型: mysql | URL: 192.168.102.45:3306
+2026-03-09 09:51:38 | INFO     | data.database:_initialize:68 - 数据库连接池初始化完成
+2026-03-09 09:51:40 | INFO     | data.embedder:_load_model:145 - 加载嵌入模型: sentence-transformers/all-MiniLM-L6-v2 | 设备: mps
+2026-03-09 09:51:44 | INFO     | data.embedder:_load_model:147 - 嵌入模型加载完成
+2026-03-09 09:51:44 | INFO     | data.vector_store:_initialize_client:182 - ChromaDB 集合初始化完成: default
+2026-03-09 09:51:44 | INFO     | llm.orchestrator:__init__:781 - LLM 调度器初始化完成 | 提供商: modelscope | 模型: deepseek-ai/DeepSeek-R1-Distill-Qwen-7B
+2026-03-09 09:51:44 | INFO     | application.rag_pipeline:__init__:69 - RAG Pipeline 初始化完成
+2026-03-09 09:51:44 | INFO     | api.main:lifespan:34 - RAG Pipeline 初始化完成
+2026-03-09 09:52:15 | INFO     | application.rag_pipeline:chat:125 - 处理查询: RAG是什么...
+2026-03-09 09:52:38 | INFO     | llm.orchestrator:switch_model:844 - 模型切换完成 | 提供商: modelscope | 模型: deepseek-ai/DeepSeek-R1-Distill-Qwen-7B
+2026-03-09 09:52:38 | INFO     | application.rag_pipeline:chat:125 - 处理查询: 你好...
+2026-03-09 09:52:49 | INFO     | llm.orchestrator:switch_model:844 - 模型切换完成 | 提供商: modelscope | 模型: deepseek-ai/DeepSeek-R1-Distill-Qwen-7B
+2026-03-09 09:52:49 | INFO     | application.rag_pipeline:chat:125 - 处理查询: 你好...

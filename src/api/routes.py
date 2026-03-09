@@ -27,12 +27,22 @@ def set_rag_pipeline(pipeline):
 @router.post("/chat", response_model=ChatResponse)
 async def chat(request: ChatRequest):
     """RAG 聊天接口
-    
+
     接收用户查询，返回检索增强后的回答
     """
     if _rag_pipeline is None:
         raise HTTPException(status_code=500, detail="RAG Pipeline 未初始化")
-    
+
+    # 切换模型（如果提供了 provider 或 model）
+    if request.provider or request.model:
+        try:
+            _rag_pipeline.llm.switch_model(
+                provider=request.provider,
+                model=request.model,
+            )
+        except Exception as e:
+            logger.warning(f"模型切换失败: {e}")
+
     try:
         response = await _rag_pipeline.chat(
             query=request.query,
@@ -65,7 +75,17 @@ async def chat_stream(request: ChatRequest):
     """流式聊天接口"""
     if _rag_pipeline is None:
         raise HTTPException(status_code=500, detail="RAG Pipeline 未初始化")
-    
+
+    # 切换模型（如果提供了 provider 或 model）
+    if request.provider or request.model:
+        try:
+            _rag_pipeline.llm.switch_model(
+                provider=request.provider,
+                model=request.model,
+            )
+        except Exception as e:
+            logger.warning(f"模型切换失败: {e}")
+
     async def event_generator():
         try:
             async for chunk in await _rag_pipeline.chat(

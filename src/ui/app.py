@@ -18,18 +18,18 @@ def render_sidebar():
     """
     st.sidebar.title("⚙️ 系统设置")
     
-    # 模型选择
-    model_provider = st.sidebar.selectbox(
-        "LLM 提供商",
-        ["openai", "anthropic", "ollama"],
-        index=0,
-    )
-    
-    model_name = st.sidebar.selectbox(
-        "模型",
-        ["gpt-3.5-turbo", "gpt-4"] if model_provider == "openai"
-        else ["claude-3-sonnet", "llama2"],
-    )
+    # 模型选择 - 只支持 ModelScope
+    model_provider = "modelscope"
+
+    model_options = [
+        "deepseek-ai/DeepSeek-R1-Distill-Qwen-7B",
+        "Qwen/Qwen3-8B",
+        "Qwen/Qwen3-4B",
+        "Qwen/Qwen2.5-7B-Instruct",
+        "Qwen/Qwen2.5-4B-Instruct",
+    ]
+
+    model_name = st.sidebar.selectbox("模型", model_options, index=0)
     
     # 检索参数
     top_k = st.sidebar.slider("检索数量", 1, 10, 5)
@@ -39,7 +39,7 @@ def render_sidebar():
         st.session_state.messages = []
         st.rerun()
     
-    return model_provider, model_name, top_k
+    return model_name, top_k
 
 
 def render_chat_message(role: str, content: str, sources: list = None):
@@ -61,23 +61,24 @@ def render_chat_message(role: str, content: str, sources: list = None):
                     st.caption(f"相似度: {s.get('score', 0):.2f}")
 
 
-def call_api(query: str, model: str, top_k: int):
+def call_api(query: str, model: str, top_k: int, provider: str = "modelscope"):
     """调用后端 API
-    
+
     Args:
         query: 查询文本
         model: 模型名称
         top_k: 检索数量
-        
+        provider: LLM 提供商
+
     Returns:
         dict: API 响应
     """
     import requests
-    
+
     try:
         response = requests.post(
             "http://localhost:8000/api/v1/chat",
-            json={"query": query, "model": model, "top_k": top_k},
+            json={"query": query, "model": model, "provider": provider, "top_k": top_k},
             timeout=30,
         )
         return response.json()
@@ -98,7 +99,7 @@ def main():
     init_session_state()
     
     # 渲染侧边栏
-    model_provider, model_name, top_k = render_sidebar()
+    model_name, top_k = render_sidebar()
     
     # 标题
     st.title("💬 RAG 智能问答系统")

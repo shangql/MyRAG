@@ -3,7 +3,19 @@
     "allow": [
       "Bash(python:*)",
       "Bash(source:*)",
-      "Bash(chmod +x:*)"
+      "Bash(chmod +x:*)",
+      "Bash(python3:*)",
+      "Bash(.venv/bin/python:*)",
+      "Bash(uv sync:*)",
+      "Bash(uv pip:*)",
+      "Bash(/bin/sleep 5:*)",
+      "Bash(lsof:*)",
+      "Bash(/bin/sleep 8:*)",
+      "Bash(PYTHONPATH=src .venv/bin/python:*)",
+      "Bash(pkill:*)",
+      "Bash(./run.sh api:*)",
+      "Bash(curl:*)",
+      "Bash(./run.sh ui:*)"
     ]
   }
 }
