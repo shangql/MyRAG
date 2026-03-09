@@ -1,8 +1,11 @@
 """FastAPI 应用入口"""
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 
 from api.routes import router, set_rag_pipeline
 from core.config import settings
@@ -65,7 +68,14 @@ def create_app() -> FastAPI:
     
     # 注册路由
     app.include_router(router)
-    
+
+    # 静态文件服务
+    ui_path = Path(__file__).parent.parent / "ui"
+    if (ui_path / "templates").exists():
+        @app.get("/")
+        async def serve_index():
+            return FileResponse(ui_path / "templates" / "index.html")
+
     return app
 
 

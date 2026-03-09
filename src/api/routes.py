@@ -118,3 +118,15 @@ async def switch_model(request: SwitchModelRequest):
 async def health():
     """健康检查接口"""
     return HealthResponse(status="ok", version="0.1.0")
+
+
+@router.get("/models")
+async def list_models():
+    """获取可用模型列表"""
+    models = [
+        {"id": "deepseek-ai/DeepSeek-R1-Distill-Qwen-7B", "name": "DeepSeek-R1"},
+        {"id": "Qwen/Qwen3-8B", "name": "Qwen3-8B"},
+        {"id": "Qwen/Qwen3-4B", "name": "Qwen3-4B"},
+        {"id": "Qwen/Qwen2.5-7B-Instruct", "name": "Qwen2.5-7B"},
+    ]
+    return {"models": models}
