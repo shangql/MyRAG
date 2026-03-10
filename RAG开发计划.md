@@ -31,14 +31,17 @@
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                        Web 层                                   │
-│  ┌─────────────────┐    ┌─────────────────────────────────┐   │
-│  │   Streamlit UI   │    │        FastAPI Backend          │   │
-│  │  (前端交互界面)   │◄──►│   (REST API / WebSocket)        │   │
-│  └─────────────────┘    └─────────────────────────────────┘   │
-└─────────────────────────────────────────────────────────────────┘
-                                    │
-                                    ▼
+│ Web 层 │
+│ ┌─────────────────────────────────────────────────────────┐ │
+│ │ 原生 HTML/JS 单页应用 (SPA) │ │
+│ │ • 聊天对话界面 • 流式输出 • 对话历史 │ │
+│ └─────────────────────────────────────────────────────────┘ │
+│ │
+▼ ┌─────────────────────────────────────────────────────────┐ │
+│ FastAPI Backend │ │
+│ • REST API • SSE 流式输出 • 文件上传 │ │
+└─────────────────────────────────────────────────────────┘
+▼
 ┌─────────────────────────────────────────────────────────────────┐
 │                      应用层 (Application)                        │
 │  ┌──────────────┐  ┌──────────────┐  ┌──────────────────────┐  │
@@ -67,11 +70,11 @@
 
 | 层级 | 技术选型 | 说明 |
 |------|----------|------|
-| **Web 框架** | FastAPI | 高性能异步 API，支持 WebSocket 流式输出 |
-| **前端** | Streamlit | 快速构建数据应用的 UI 框架 |
+| **Web 框架** | FastAPI | 高性能异步 API，支持 SSE 流式输出 |
+| **前端** | 原生 HTML/JS | 轻量级单页应用，无需构建工具 |
 | **向量存储** | ChromaDB / FAISS | 轻量级向量数据库，支持本地部署 |
 | **嵌入模型** | sentence-transformers | 开源中文/英文嵌入模型 |
-| **LLM 客户端** | OpenAI 兼容 API | 通过 OpenAI 兼容接口接入 ModelScope |
+| **LLM 客户端** | OpenAI 兼容 API | 通过 OpenAI 兼容接口接入 ModelScope / Ollama |
 | **数据库驱动** | SQLAlchemy + pymysql | 关系型数据库 ORM |
 | **配置管理** | Pydantic Settings | 类型安全的配置管理 |
 | **日志** | Loguru | 美化的日志输出 |
@@ -82,6 +85,33 @@
 
 ### 3.1 核心模块
 
+```
+rag_system/
+├── core/ # 核心模块
+│ ├── config.py # 配置管理
+│ ├── logger.py # 日志配置
+│ └── exceptions.py # 自定义异常
+├── data/ # 数据层
+│ ├── database.py # 数据库连接器
+│ ├── vector_store.py # 向量存储管理
+│ ├── embedder.py # 嵌入模型管理
+│ └── file_model.py # 文件数据模型
+├── retrieval/ # 检索模块
+│ ├── hybrid_retriever.py # 混合检索实现 (向量 + BM25)
+│ └── query_processor.py # 查询处理器
+├── llm/ # LLM 模块
+│ ├── orchestrator.py # LLM 调度器
+│ └── modelscope_llm.py # ModelScope 实现 (OpenAI 兼容)
+├── application/ # 应用层
+│ └── rag_pipeline.py # RAG 流程编排
+├── api/ # API 层
+│ ├── main.py # FastAPI 应用入口
+│ ├── routes.py # API 路由
+│ ├── parser.py # 文件解析器
+│ └── schemas.py # Pydantic 模型
+└── ui/ # 前端界面
+    └── templates/ # HTML 模板
+        └── index.html # 聊天界面
 ```
 rag_system/
 ├── core/                       # 核心模块
@@ -194,9 +224,9 @@ rag_system/
 |------|------|------|
 | 6.1 | FastAPI 基础 | ✅ 完成 |
 | 6.2 | REST API | ✅ 完成 |
-| 6.3 | 流式响应 | ✅ 完成 |
-| 6.4 | Streamlit UI | ✅ 完成 |
-| 6.5 | 前端优化 | ✅ 完成 |
+| 6.3 | 流式响应 (SSE) | ✅ 完成 |
+| 6.4 | 原生 HTML/JS 前端 | ✅ 完成 |
+| 6.5 | 文件上传解析 | ✅ 完成 |
 
 ### 阶段七：测试与部署 ⏳ 待开发
 
@@ -402,12 +432,19 @@ uv sync
 cp .env.example .env
 # 编辑 .env 文件，填写必要的配置
 
-# 3. 启动 API 服务
-./run.sh api
+# 3. 启动服务
+./run.sh
 
-# 4. 启动 Streamlit UI（可选）
-./run.sh ui
+# 4. 访问 Web 界面
+http://localhost:8000
 ```
+
+### 6.2 启动脚本说明
+
+`run.sh` 会自动：
+1. 激活 conda 环境 `myrag`（包含 PyTorch 2.10.0）
+2. 启动 FastAPI 服务（端口 8000）
+3. 启动原生 HTML 前端
 
 ### 6.2 API 文档
 
@@ -415,34 +452,98 @@ cp .env.example .env
 
 ### 6.3 可用模型
 
-| 模型 | 说明 |
-|------|------|
-| deepseek-ai/DeepSeek-R1-Distill-Qwen-7B | 推理模型，适合复杂问题 |
-| Qwen/Qwen3-8B | 通用模型 |
-| Qwen/Qwen3-4B | 轻量级模型 |
+| 提供商 | 模型 | 说明 |
+|--------|------|------|
+| **ModelScope** | deepseek-ai/DeepSeek-R1-Distill-Qwen-7B | 推理模型（需要 API Key） |
+| **ModelScope** | Qwen/Qwen3-8B | 通用模型 |
+| **Ollama** (本地) | qwen:7b | 本地部署，无需外网 |
+| **Ollama** (本地) | llama2 | 本地部署 |
 
 ---
 
-## 七、关键风险与应对
+## 七、系统当前状态
+
+### 7.1 已完成 ✅
+
+| 模块 | 状态 | 说明 |
+|------|------|------|
+| 项目初始化 | ✅ | 目录结构、配置管理 |
+| PyTorch 2.10.0 | ✅ | 通过 conda 安装 |
+| 嵌入模型 | ✅ | sentence-transformers/all-MiniLM-L6-v2 |
+| 向量存储 | ✅ | ChromaDB 本地部署 |
+| 文件解析 | ✅ | TXT/PDF/DOCX/XLSX/CSV/HTML |
+| 文件上传 | ✅ | MySQL 持久化存储 |
+| RAG Pipeline | ✅ | 混合检索 + LLM 生成 |
+| API 接口 | ✅ | REST API + SSE 流式输出 |
+| 前端界面 | ✅ | 原生 HTML/JS |
+
+### 7.2 待解决 ⚠️
+
+| 问题 | 状态 | 解决方案 |
+|------|------|----------|
+| ModelScope API 超时 | ⚠️ 网络问题 | 使用 Ollama 本地模型 |
+| 查询预处理 | ⏳ 待开发 | jieba 中文分词 |
+| Redis 缓存 | ⏳ 待开发 | 缓存查询结果 |
+| 单元测试 | ⏳ 待开发 | pytest 覆盖率测试 |
+
+### 7.3 启动步骤（当前配置）
+
+```bash
+# 使用 conda 环境
+source ~/miniforge3/etc/profile.d/conda.sh
+conda activate myrag
+
+# 启动服务
+cd /Users/sql/GitHub/MyRAG
+./run.sh
+
+# 访问
+# 前端: http://localhost:8000
+# API 文档: http://localhost:8000/docs
+```
+
+### 7.4 启用本地 Ollama 模型（如 ModelScope 不可用）
+
+```bash
+# 1. 安装 Ollama
+brew install ollama
+
+# 2. 启动服务
+ollama serve
+
+# 3. 下载模型
+ollama pull qwen:7b
+
+# 4. 配置 .env
+LLM_PROVIDER=ollama
+OLLAMA_BASE_URL=http://localhost:11434
+MODEL_NAME=qwen:7b
+```
+
+---
+
+## 八、关键风险与应对
 
 | 风险 | 影响 | 应对方案 |
 |------|------|----------|
+| ModelScope API 网络问题 | LLM 调用超时 | 切换到 Ollama 本地模型 |
 | 向量检索效果不佳 | 回答质量低 | 调优嵌入模型、添加查询改写 |
-| LLM API 配额不足 | 服务不可用 | 使用免费配额、申请更多配额 |
+| LLM API 配额不足 | 服务不可用 | 使用 Ollama 本地模型 |
 | 中文分词效果 | 检索准确性 | 使用专业中文分词库（jieba） |
 | 大并发性能 | 响应延迟 | 添加 Redis 缓存、异步队列 |
 | 数据安全 | 隐私泄露 | 数据脱敏、访问控制 |
 
 ---
 
-## 八、后续扩展方向
+## 九、后续扩展方向
 
 1. **Agent 能力**：支持工具调用、多轮对话
 2. **个性化**：用户偏好学习、对话风格定制
 3. **监控运维**：请求日志、指标监控、告警
-4. **本地部署**：支持 Ollama 本地模型
+4. **性能优化**：Redis 缓存、查询预处理
 
 ---
 
-*文档版本: v2.0*
-*更新日期: 2026-03-06*
+*文档版本: v3.0*
+*更新日期: 2026-03-10*
+*更新内容：移除 Streamlit UI，改为原生 HTML/JS 前端；添加系统当前状态*

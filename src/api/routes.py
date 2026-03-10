@@ -22,6 +22,73 @@ def _get_file_record():
 from fastapi import APIRouter, HTTPException, UploadFile, File, Form
 from fastapi.responses import StreamingResponse
 
+from application.rag_pipeline import RAGResponse
+
+
+async def stream_rag_response(
+    pipeline,
+    query: str,
+    top_k: int,
+    provider: str = None,
+    model: str = None,
+) -> StreamingResponse:
+    """流式生成 RAG 响应
+
+    Args:
+        pipeline: RAG Pipeline 实例
+        query: 用户查询
+        top_k: 检索结果数量
+        provider: LLM 提供商
+        model: 模型名称
+
+    Returns:
+        StreamingResponse: SSE 格式的流式响应
+    """
+    # 切换模型（如果提供了 provider 或 model）
+    if provider or model:
+        try:
+            pipeline.llm.switch_model(provider=provider, model=model)
+        except Exception as e:
+            pass  # 忽略切换失败，继续使用当前模型
+
+    async def event_generator():
+        """生成 SSE 事件"""
+        try:
+            # 获取流式响应
+            stream_iter = await pipeline.chat(
+                query=query,
+                top_k=top_k,
+                stream=True,
+            )
+
+            # 检查是否为 RAGResponse（同步返回），转换为异步迭代器
+            if isinstance(stream_iter, RAGResponse):
+                # 非流式响应，yield 完整结果
+                import json
+
+                yield f"data: {json.dumps({'answer': stream_iter.answer, 'done': True})}\n\n"
+                yield "data: [DONE]\n\n"
+                return
+
+            # 流式响应
+            async for chunk in stream_iter:
+                # 过滤空内容
+                if chunk and chunk.strip():
+                    import json
+
+                    yield f"data: {json.dumps({'answer': chunk, 'done': False})}\n\n"
+
+            # 发送完成信号
+            yield "data: [DONE]\n\n"
+        except Exception as e:
+            yield f"data: {json.dumps({'error': str(e)})}\n\n"
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+    )
+
+
 from api.schemas import (
     ChatRequest,
     ChatResponse,
@@ -47,13 +114,35 @@ def set_rag_pipeline(pipeline):
     _rag_pipeline = pipeline
 
 
-@router.post("/chat", response_model=ChatResponse)
+@router.post("/chat")
 async def chat(request: ChatRequest):
     """RAG 聊天接口
 
     接收用户查询，返回检索增强后的回答
-    如果 RAG Pipeline 未初始化，则使用纯 LLM 回答
+    如果 stream=True，返回 SSE 流式响应
+    否则返回完整的 JSON 响应
     """
+    import json
+
+    # 如果请求流式输出，直接返回流式响应
+    if request.stream:
+        if _rag_pipeline is None:
+            # Pipeline 未初始化时返回错误
+            async def error_generator():
+                yield f"data: {json.dumps({'error': 'RAG Pipeline 未初始化'})}\n\n"
+                yield "data: [DONE]\n\n"
+
+            return StreamingResponse(error_generator(), media_type="text/event-stream")
+
+        return await stream_rag_response(
+            pipeline=_rag_pipeline,
+            query=request.query,
+            top_k=request.top_k or 5,
+            provider=request.provider,
+            model=request.model,
+        )
+
+    # 非流式模式：返回完整响应
     # 如果 RAG Pipeline 未初始化，使用纯 LLM 模式
     if _rag_pipeline is None:
         from llm.orchestrator import LLMOrchestrator, Message
@@ -94,13 +183,13 @@ async def chat(request: ChatRequest):
                 model=request.model,
             )
         except Exception as e:
-            logger.warning(f"模型切换失败: {e}")
+            pass  # 忽略切换失败
 
     try:
         response = await _rag_pipeline.chat(
             query=request.query,
             top_k=request.top_k,
-            stream=request.stream,
+            stream=False,  # 非流式模式
         )
 
         # 序列化来源

@@ -1233,3 +1233,112 @@
 2026-03-09 16:34:05 | INFO     | llm.orchestrator:switch_model:844 - 模型切换完成 | 提供商: modelscope | 模型: deepseek-ai/DeepSeek-R1-Distill-Qwen-7B
 2026-03-09 16:34:05 | INFO     | application.rag_pipeline:chat:131 - 处理查询: RAG...
 2026-03-09 16:34:27 | INFO     | api.main:lifespan:80 - RAG API 服务关闭
+2026-03-09 16:49:09 | INFO     | core.logger:setup_logging:71 - 日志系统初始化完成 | 级别: INFO
+2026-03-09 16:49:09 | INFO     | core.logger:setup_logging:73 - 日志文件: ./logs/app.log
+2026-03-09 16:49:09 | INFO     | api.main:lifespan:24 - RAG API 服务启动
+2026-03-09 16:49:09 | INFO     | data.database:_initialize:52 - 初始化数据库连接 | 类型: mysql | URL: 192.168.102.45:3306
+2026-03-09 16:49:09 | INFO     | data.database:_initialize:73 - 数据库连接池初始化完成
+2026-03-09 16:49:14 | INFO     | data.embedder:<module>:28 - PyTorch 版本: 2.10.0, sentence-transformers 已加载
+2026-03-09 16:49:14 | WARNING  | api.main:lifespan:43 - 数据库表创建失败: [Errno 2] No such file or directory: '/Users/sql/GitHub/MyRAG/src/api/data/file_model.py'
+2026-03-09 16:49:19 | INFO     | data.embedder:__init__:123 - 嵌入模型加载成功: sentence-transformers/all-MiniLM-L6-v2 | 设备: cpu | 向量维度: 384
+2026-03-09 16:49:20 | INFO     | data.vector_store:_initialize_client:182 - ChromaDB 集合初始化完成: default
+2026-03-09 16:49:20 | INFO     | llm.orchestrator:__init__:781 - LLM 调度器初始化完成 | 提供商: modelscope | 模型: deepseek-ai/DeepSeek-R1-Distill-Qwen-7B
+2026-03-09 16:49:20 | INFO     | application.rag_pipeline:__init__:75 - RAG Pipeline 初始化完成
+2026-03-09 16:49:20 | INFO     | api.main:lifespan:71 - RAG Pipeline 初始化完成
+2026-03-09 16:49:36 | INFO     | llm.orchestrator:switch_model:844 - 模型切换完成 | 提供商: modelscope | 模型: deepseek-ai/DeepSeek-R1-Distill-Qwen-7B
+2026-03-09 16:49:36 | INFO     | application.rag_pipeline:chat:131 - 处理查询: 你好，请介绍一下你自己...
+2026-03-09 16:54:51 | INFO     | core.logger:setup_logging:71 - 日志系统初始化完成 | 级别: INFO
+2026-03-09 16:54:51 | INFO     | core.logger:setup_logging:73 - 日志文件: ./logs/app.log
+2026-03-09 16:54:51 | INFO     | api.main:lifespan:24 - RAG API 服务启动
+2026-03-09 16:54:51 | INFO     | data.database:_initialize:52 - 初始化数据库连接 | 类型: mysql | URL: 192.168.102.45:3306
+2026-03-09 16:54:51 | INFO     | data.database:_initialize:73 - 数据库连接池初始化完成
+2026-03-09 16:54:55 | INFO     | data.embedder:<module>:28 - PyTorch 版本: 2.10.0, sentence-transformers 已加载
+2026-03-09 16:54:55 | WARNING  | api.main:lifespan:43 - 数据库表创建失败: [Errno 2] No such file or directory: '/Users/sql/GitHub/MyRAG/src/api/data/file_model.py'
+2026-03-09 16:55:01 | INFO     | data.embedder:__init__:123 - 嵌入模型加载成功: sentence-transformers/all-MiniLM-L6-v2 | 设备: cpu | 向量维度: 384
+2026-03-09 16:55:01 | INFO     | data.vector_store:_initialize_client:182 - ChromaDB 集合初始化完成: default
+2026-03-09 16:55:01 | INFO     | llm.orchestrator:__init__:781 - LLM 调度器初始化完成 | 提供商: modelscope | 模型: deepseek-ai/DeepSeek-R1-Distill-Qwen-7B
+2026-03-09 16:55:01 | INFO     | application.rag_pipeline:__init__:75 - RAG Pipeline 初始化完成
+2026-03-09 16:55:01 | INFO     | api.main:lifespan:71 - RAG Pipeline 初始化完成
+2026-03-09 16:55:32 | INFO     | llm.orchestrator:switch_model:844 - 模型切换完成 | 提供商: modelscope | 模型: deepseek-ai/DeepSeek-R1-Distill-Qwen-7B
+2026-03-09 16:55:32 | INFO     | application.rag_pipeline:chat:131 - 处理查询: hello...
+2026-03-09 16:57:24 | INFO     | core.logger:setup_logging:71 - 日志系统初始化完成 | 级别: INFO
+2026-03-09 16:57:24 | INFO     | core.logger:setup_logging:73 - 日志文件: ./logs/app.log
+2026-03-09 16:57:24 | INFO     | api.main:lifespan:24 - RAG API 服务启动
+2026-03-09 16:57:24 | INFO     | data.database:_initialize:52 - 初始化数据库连接 | 类型: mysql | URL: 192.168.102.45:3306
+2026-03-09 16:57:24 | INFO     | data.database:_initialize:73 - 数据库连接池初始化完成
+2026-03-09 16:57:29 | INFO     | data.embedder:<module>:28 - PyTorch 版本: 2.10.0, sentence-transformers 已加载
+2026-03-09 16:57:29 | WARNING  | api.main:lifespan:43 - 数据库表创建失败: [Errno 2] No such file or directory: '/Users/sql/GitHub/MyRAG/src/api/data/file_model.py'
+2026-03-09 16:57:39 | INFO     | data.embedder:__init__:123 - 嵌入模型加载成功: sentence-transformers/all-MiniLM-L6-v2 | 设备: cpu | 向量维度: 384
+2026-03-09 16:57:39 | INFO     | data.vector_store:_initialize_client:182 - ChromaDB 集合初始化完成: default
+2026-03-09 16:57:39 | INFO     | llm.orchestrator:__init__:781 - LLM 调度器初始化完成 | 提供商: modelscope | 模型: deepseek-ai/DeepSeek-R1-Distill-Qwen-7B
+2026-03-09 16:57:39 | INFO     | application.rag_pipeline:__init__:75 - RAG Pipeline 初始化完成
+2026-03-09 16:57:39 | INFO     | api.main:lifespan:71 - RAG Pipeline 初始化完成
+2026-03-09 16:58:33 | INFO     | api.main:lifespan:80 - RAG API 服务关闭
+2026-03-09 16:58:33 | INFO     | core.logger:setup_logging:71 - 日志系统初始化完成 | 级别: INFO
+2026-03-09 16:58:33 | INFO     | core.logger:setup_logging:73 - 日志文件: ./logs/app.log
+2026-03-09 16:58:33 | INFO     | api.main:lifespan:24 - RAG API 服务启动
+2026-03-09 16:58:33 | INFO     | data.database:_initialize:52 - 初始化数据库连接 | 类型: mysql | URL: 192.168.102.45:3306
+2026-03-09 16:58:33 | INFO     | data.database:_initialize:73 - 数据库连接池初始化完成
+2026-03-09 16:58:38 | INFO     | data.embedder:<module>:28 - PyTorch 版本: 2.10.0, sentence-transformers 已加载
+2026-03-09 16:58:38 | INFO     | api.main:lifespan:41 - 数据库表创建完成
+2026-03-09 16:58:43 | INFO     | data.embedder:__init__:123 - 嵌入模型加载成功: sentence-transformers/all-MiniLM-L6-v2 | 设备: cpu | 向量维度: 384
+2026-03-09 16:58:44 | INFO     | data.vector_store:_initialize_client:182 - ChromaDB 集合初始化完成: default
+2026-03-09 16:58:44 | INFO     | llm.orchestrator:__init__:781 - LLM 调度器初始化完成 | 提供商: modelscope | 模型: deepseek-ai/DeepSeek-R1-Distill-Qwen-7B
+2026-03-09 16:58:44 | INFO     | application.rag_pipeline:__init__:75 - RAG Pipeline 初始化完成
+2026-03-09 16:58:44 | INFO     | api.main:lifespan:71 - RAG Pipeline 初始化完成
+2026-03-09 16:58:44 | INFO     | api.main:lifespan:80 - RAG API 服务关闭
+2026-03-09 16:59:52 | INFO     | core.logger:setup_logging:71 - 日志系统初始化完成 | 级别: INFO
+2026-03-09 16:59:52 | INFO     | core.logger:setup_logging:73 - 日志文件: ./logs/app.log
+2026-03-09 16:59:52 | INFO     | api.main:lifespan:24 - RAG API 服务启动
+2026-03-09 16:59:52 | INFO     | data.database:_initialize:52 - 初始化数据库连接 | 类型: mysql | URL: 192.168.102.45:3306
+2026-03-09 16:59:52 | INFO     | data.database:_initialize:73 - 数据库连接池初始化完成
+2026-03-09 16:59:57 | INFO     | data.embedder:<module>:28 - PyTorch 版本: 2.10.0, sentence-transformers 已加载
+2026-03-09 16:59:57 | INFO     | api.main:lifespan:41 - 数据库表创建完成
+2026-03-09 17:00:03 | INFO     | data.embedder:__init__:123 - 嵌入模型加载成功: sentence-transformers/all-MiniLM-L6-v2 | 设备: cpu | 向量维度: 384
+2026-03-09 17:00:03 | INFO     | data.vector_store:_initialize_client:182 - ChromaDB 集合初始化完成: default
+2026-03-09 17:00:03 | INFO     | llm.orchestrator:__init__:781 - LLM 调度器初始化完成 | 提供商: modelscope | 模型: deepseek-ai/DeepSeek-R1-Distill-Qwen-7B
+2026-03-09 17:00:03 | INFO     | application.rag_pipeline:__init__:75 - RAG Pipeline 初始化完成
+2026-03-09 17:00:03 | INFO     | api.main:lifespan:71 - RAG Pipeline 初始化完成
+2026-03-09 17:00:18 | INFO     | llm.orchestrator:switch_model:844 - 模型切换完成 | 提供商: modelscope | 模型: deepseek-ai/DeepSeek-R1-Distill-Qwen-7B
+2026-03-09 17:00:18 | INFO     | application.rag_pipeline:chat:131 - 处理查询: hello...
+2026-03-09 17:01:52 | INFO     | core.logger:setup_logging:71 - 日志系统初始化完成 | 级别: INFO
+2026-03-09 17:01:52 | INFO     | core.logger:setup_logging:73 - 日志文件: ./logs/app.log
+2026-03-09 17:01:52 | INFO     | api.main:lifespan:24 - RAG API 服务启动
+2026-03-09 17:01:53 | INFO     | data.database:_initialize:52 - 初始化数据库连接 | 类型: mysql | URL: 192.168.102.45:3306
+2026-03-09 17:01:53 | INFO     | data.database:_initialize:73 - 数据库连接池初始化完成
+2026-03-09 17:01:57 | INFO     | data.embedder:<module>:28 - PyTorch 版本: 2.10.0, sentence-transformers 已加载
+2026-03-09 17:01:57 | INFO     | api.main:lifespan:41 - 数据库表创建完成
+2026-03-09 17:02:03 | INFO     | data.embedder:__init__:123 - 嵌入模型加载成功: sentence-transformers/all-MiniLM-L6-v2 | 设备: cpu | 向量维度: 384
+2026-03-09 17:02:03 | INFO     | data.vector_store:_initialize_client:182 - ChromaDB 集合初始化完成: default
+2026-03-09 17:02:03 | INFO     | llm.orchestrator:__init__:781 - LLM 调度器初始化完成 | 提供商: modelscope | 模型: deepseek-ai/DeepSeek-R1-Distill-Qwen-7B
+2026-03-09 17:02:03 | INFO     | application.rag_pipeline:__init__:75 - RAG Pipeline 初始化完成
+2026-03-09 17:02:03 | INFO     | api.main:lifespan:71 - RAG Pipeline 初始化完成
+2026-03-09 17:19:17 | INFO     | api.main:lifespan:80 - RAG API 服务关闭
+2026-03-09 17:19:19 | INFO     | core.logger:setup_logging:71 - 日志系统初始化完成 | 级别: INFO
+2026-03-09 17:19:19 | INFO     | core.logger:setup_logging:73 - 日志文件: ./logs/app.log
+2026-03-09 17:19:19 | INFO     | api.main:lifespan:24 - RAG API 服务启动
+2026-03-09 17:19:19 | INFO     | data.database:_initialize:52 - 初始化数据库连接 | 类型: mysql | URL: 192.168.102.45:3306
+2026-03-09 17:19:19 | INFO     | data.database:_initialize:73 - 数据库连接池初始化完成
+2026-03-09 17:19:25 | INFO     | data.embedder:<module>:28 - PyTorch 版本: 2.10.0, sentence-transformers 已加载
+2026-03-09 17:19:25 | INFO     | api.main:lifespan:41 - 数据库表创建完成
+2026-03-09 17:19:31 | INFO     | data.embedder:__init__:123 - 嵌入模型加载成功: sentence-transformers/all-MiniLM-L6-v2 | 设备: cpu | 向量维度: 384
+2026-03-09 17:19:31 | INFO     | data.vector_store:_initialize_client:182 - ChromaDB 集合初始化完成: default
+2026-03-09 17:19:31 | INFO     | llm.orchestrator:__init__:781 - LLM 调度器初始化完成 | 提供商: modelscope | 模型: deepseek-ai/DeepSeek-R1-Distill-Qwen-7B
+2026-03-09 17:19:31 | INFO     | application.rag_pipeline:__init__:75 - RAG Pipeline 初始化完成
+2026-03-09 17:19:31 | INFO     | api.main:lifespan:71 - RAG Pipeline 初始化完成
+2026-03-09 17:19:37 | INFO     | llm.orchestrator:switch_model:844 - 模型切换完成 | 提供商: modelscope | 模型: deepseek-ai/DeepSeek-R1-Distill-Qwen-7B
+2026-03-09 17:19:37 | INFO     | application.rag_pipeline:chat:131 - 处理查询: rag...
+2026-03-10 09:38:46 | INFO     | core.logger:setup_logging:71 - 日志系统初始化完成 | 级别: INFO
+2026-03-10 09:38:46 | INFO     | core.logger:setup_logging:73 - 日志文件: ./logs/app.log
+2026-03-10 09:38:46 | INFO     | api.main:lifespan:24 - RAG API 服务启动
+2026-03-10 09:38:46 | INFO     | data.database:_initialize:52 - 初始化数据库连接 | 类型: mysql | URL: 192.168.102.45:3306
+2026-03-10 09:38:46 | INFO     | data.database:_initialize:73 - 数据库连接池初始化完成
+2026-03-10 09:38:52 | INFO     | data.embedder:<module>:28 - PyTorch 版本: 2.10.0, sentence-transformers 已加载
+2026-03-10 09:38:52 | INFO     | api.main:lifespan:41 - 数据库表创建完成
+2026-03-10 09:38:58 | INFO     | data.embedder:__init__:123 - 嵌入模型加载成功: sentence-transformers/all-MiniLM-L6-v2 | 设备: cpu | 向量维度: 384
+2026-03-10 09:38:58 | INFO     | data.vector_store:_initialize_client:182 - ChromaDB 集合初始化完成: default
+2026-03-10 09:38:58 | INFO     | llm.orchestrator:__init__:781 - LLM 调度器初始化完成 | 提供商: modelscope | 模型: deepseek-ai/DeepSeek-R1-Distill-Qwen-7B
+2026-03-10 09:38:58 | INFO     | application.rag_pipeline:__init__:75 - RAG Pipeline 初始化完成
+2026-03-10 09:38:58 | INFO     | api.main:lifespan:71 - RAG Pipeline 初始化完成
+2026-03-10 09:39:09 | INFO     | llm.orchestrator:switch_model:844 - 模型切换完成 | 提供商: modelscope | 模型: deepseek-ai/DeepSeek-R1-Distill-Qwen-7B
+2026-03-10 09:39:09 | INFO     | application.rag_pipeline:chat:131 - 处理查询: 你好...

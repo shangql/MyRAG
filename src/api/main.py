@@ -31,9 +31,9 @@ async def lifespan(app: FastAPI):
         # 直接导入模型文件，避免触发 data/__init__.py 中的 embedder 导入
         import importlib.util
 
-        spec = importlib.util.spec_from_file_location(
-            "file_model", Path(__file__).parent / "data" / "file_model.py"
-        )
+        # 修复路径：src/api/ -> src/
+        file_model_path = Path(__file__).parent.parent / "data" / "file_model.py"
+        spec = importlib.util.spec_from_file_location("file_model", file_model_path)
         file_model = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(file_model)
 
